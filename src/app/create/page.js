@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
@@ -242,6 +242,104 @@ export default function CreateTournamentPage() {
   );
 }
 
+// ─── Facility typeahead ───────────────────────────────────────────────────────
+
+function FacilityAutocomplete({ facilityId, facilityName, onChange }) {
+  const [query, setQuery] = useState(facilityName || '');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  // Keep display text in sync if parent resets the form
+  useEffect(() => {
+    setQuery(facilityName || '');
+  }, [facilityName]);
+
+  const filtered = query.length >= 3
+    ? FACILITIES.filter(f =>
+        f.name.toLowerCase().includes(query.toLowerCase()) ||
+        f.city.toLowerCase().includes(query.toLowerCase())
+      )
+    : [];
+
+  const handleSelect = (f) => {
+    setQuery(f.name);
+    setOpen(false);
+    onChange(f.id, f.name);
+  };
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    setOpen(true);
+    // If user clears or changes away from selected name, reset selection
+    if (facilityId && val !== facilityName) onChange(null, '');
+  };
+
+  const handleBlur = (e) => {
+    // Delay so click on dropdown option fires first
+    setTimeout(() => {
+      if (!containerRef.current?.contains(document.activeElement)) {
+        setOpen(false);
+        // If nothing selected, clear the query
+        if (!facilityId) setQuery('');
+      }
+    }, 150);
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <input
+        className="input"
+        placeholder="Type to search…"
+        value={query}
+        onChange={handleChange}
+        onFocus={() => { if (query.length >= 3) setOpen(true); }}
+        onBlur={handleBlur}
+        autoComplete="off"
+        style={facilityId ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px #ff6b3533' } : {}}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 10, overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+          maxHeight: 220, overflowY: 'auto',
+        }}>
+          {filtered.map(f => (
+            <div
+              key={f.id}
+              onMouseDown={() => handleSelect(f)}
+              style={{
+                padding: '9px 12px', cursor: 'pointer', fontSize: 13,
+                borderBottom: '1px solid var(--border)',
+                background: f.id === facilityId ? 'rgba(255,107,53,0.08)' : 'transparent',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+              }}
+              onMouseEnter={e => { if (f.id !== facilityId) e.currentTarget.style.background = 'var(--surface2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = f.id === facilityId ? 'rgba(255,107,53,0.08)' : 'transparent'; }}
+            >
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{f.name}</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{f.city}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {open && query.length >= 3 && filtered.length === 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: '10px 12px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+          fontSize: 12, color: 'var(--muted)',
+        }}>
+          No facilities found
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Step progress bar ────────────────────────────────────────────────────────
 
 function StepBar({ step }) {
@@ -296,13 +394,6 @@ function StepBasics({ form, set }) {
     reader.readAsDataURL(file);
   };
 
-  const handleFacilityChange = (e) => {
-    const id = e.target.value ? Number(e.target.value) : null;
-    const facility = FACILITIES.find(f => f.id === id);
-    set('facilityId', id);
-    set('facilityName', facility?.name || '');
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Tournament Details">
@@ -323,12 +414,11 @@ function StepBasics({ form, set }) {
             </select>
           </Field>
           <Field label="Facility" required>
-            <select className="input" value={form.facilityId ?? ''} onChange={handleFacilityChange}>
-              <option value="" disabled />
-              {FACILITIES.map(f => (
-                <option key={f.id} value={f.id}>{f.name} · {f.city}</option>
-              ))}
-            </select>
+            <FacilityAutocomplete
+              facilityId={form.facilityId}
+              facilityName={form.facilityName}
+              onChange={(id, name) => { set('facilityId', id); set('facilityName', name); }}
+            />
           </Field>
         </div>
       </Section>
