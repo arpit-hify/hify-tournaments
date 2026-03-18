@@ -103,6 +103,20 @@ export default function CreateTournamentPage() {
     const facility = FACILITIES.find(f => f.id === form.facilityId);
     const joinLink = `hify.club/join/T${Date.now().toString(36).toUpperCase()}`;
 
+    // Upload banner to Supabase Storage if present
+    let bannerUrl = null;
+    if (form.bannerFile) {
+      const ext = form.bannerFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('tournament-banners')
+        .upload(fileName, form.bannerFile, { cacheControl: '3600', upsert: false });
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('tournament-banners').getPublicUrl(fileName);
+        bannerUrl = urlData.publicUrl;
+      }
+    }
+
     const { data: tournament, error: tError } = await supabase
       .from('tournaments')
       .insert({
@@ -122,6 +136,7 @@ export default function CreateTournamentPage() {
         add_var: form.addVAR,
         status: 'upcoming',
         join_link: joinLink,
+        banner_url: bannerUrl,
       })
       .select()
       .single();
