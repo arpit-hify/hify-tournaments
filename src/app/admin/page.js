@@ -428,7 +428,7 @@ export default function AdminPage() {
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 32, width: 'auto' }} />
         </a>
       </header>
     <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', background: 'var(--bg)' }}>
