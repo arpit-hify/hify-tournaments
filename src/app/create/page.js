@@ -330,16 +330,16 @@ function StepBasics({ form, set }) {
       <Section title="Date & Time">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="Start Date" required>
-            <input className="input" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} />
+            <input className="input" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} style={{ color: form.startDate ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="Start Time">
-            <input className="input" type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)} />
+            <input className="input" type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)} style={{ color: form.startTime ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="End Date" required>
-            <input className="input" type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} />
+            <input className="input" type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} style={{ color: form.endDate ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="End Time">
-            <input className="input" type="time" value={form.endTime} onChange={e => set('endTime', e.target.value)} />
+            <input className="input" type="time" value={form.endTime} onChange={e => set('endTime', e.target.value)} style={{ color: form.endTime ? 'var(--text)' : 'transparent' }} />
           </Field>
         </div>
       </Section>
