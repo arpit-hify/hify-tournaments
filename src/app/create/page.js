@@ -694,10 +694,6 @@ function StepSchedule({ form, set }) {
 
   const removeGame = (id) => set('games', form.games.filter(g => g.id !== id));
 
-  const covered = form.games.length;
-  const needed = arenaOptions.length;
-  const allCovered = needed > 0 && covered >= needed;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Add Game">
@@ -755,26 +751,6 @@ function StepSchedule({ form, set }) {
             </Field>
           </div>
 
-          {/* Arena coverage hint */}
-          {needed > 0 && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 12, fontWeight: 600,
-              color: allCovered ? 'var(--green)' : '#f79009',
-            }}>
-              {allCovered ? (
-                <>
-                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
-                  {needed} arena{needed > 1 ? 's' : ''} covered
-                </>
-              ) : (
-                <>
-                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                  {needed} arena{needed > 1 ? 's' : ''} · {covered} game{covered !== 1 ? 's' : ''} added{covered < needed ? ` · need ${needed - covered} more` : ''}
-                </>
-              )}
-            </div>
-          )}
 
           <button
             className="btn-primary"
@@ -1033,6 +1009,9 @@ function isStepValid(step, form) {
     if (form.endDate < form.startDate) return false;
     if (form.startDate === form.endDate && form.startTime && form.endTime && form.endTime <= form.startTime) return false;
     return true;
+  }
+  if (step === 2) {
+    return form.games.length > 0;
   }
   return true;
 }
