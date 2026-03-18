@@ -8,6 +8,29 @@ import { FACILITIES } from '@/lib/facilities';
 
 const ADMIN_PASSWORD = 'hify2026';
 
+const TIME_SLOTS = (() => {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      slots.push({ value: `${hh}:${mm}`, label: `${h12}:${mm} ${ampm}` });
+    }
+  }
+  return slots;
+})();
+
+function TimeSelect({ value, onChange }) {
+  return (
+    <select className="input" value={value || ''} onChange={e => onChange(e.target.value)}>
+      <option value="" disabled />
+      {TIME_SLOTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+    </select>
+  );
+}
+
 const SPORTS = ['Pickleball', 'Padel', 'Football', 'Cricket', 'Badminton'];
 
 const PACKAGES_LIST = [
@@ -469,7 +492,7 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, forma
       </DetailCard>
 
       {t.games?.length > 0 && (
-        <DetailCard title={`Match Schedule (${t.games.length} matches)`}>
+        <DetailCard title={`Game Schedule (${t.games.length} games)`}>
           {t.games.map((g, i) => (
             <div key={g.id ?? i} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
@@ -482,7 +505,7 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, forma
               }}>{i + 1}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  Arena {g.arena}{g.label ? ` · ${g.label}` : ''}
+                  {g.arena}{g.label ? ` · ${g.label}` : ''}
                 </div>
                 {g.start_time && (
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>
@@ -580,13 +603,13 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
             <input className="input" type="date" value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)} />
           </EditField>
           <EditField label="Start Time">
-            <input className="input" type="time" value={form.start_time ?? ''} onChange={e => set('start_time', e.target.value)} />
+            <TimeSelect value={form.start_time ?? ''} onChange={v => set('start_time', v)} />
           </EditField>
           <EditField label="End Date">
             <input className="input" type="date" value={form.end_date ?? ''} onChange={e => set('end_date', e.target.value)} />
           </EditField>
           <EditField label="End Time">
-            <input className="input" type="time" value={form.end_time ?? ''} onChange={e => set('end_time', e.target.value)} />
+            <TimeSelect value={form.end_time ?? ''} onChange={v => set('end_time', v)} />
           </EditField>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

@@ -43,6 +43,31 @@ const STEPS = [
   { id: 'review', label: 'Review' },
 ];
 
+// ─── Time slots (15-min intervals, full day) ──────────────────────────────────
+
+const TIME_SLOTS = (() => {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      slots.push({ value: `${hh}:${mm}`, label: `${h12}:${mm} ${ampm}` });
+    }
+  }
+  return slots;
+})();
+
+function TimeSelect({ value, onChange, style }) {
+  return (
+    <select className="input" value={value || ''} onChange={e => onChange(e.target.value)} style={style}>
+      <option value="" disabled />
+      {TIME_SLOTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+    </select>
+  );
+}
+
 // ─── Initial form state ───────────────────────────────────────────────────────
 
 const INITIAL = {
@@ -90,8 +115,6 @@ export default function CreateTournamentPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const joinLink = `hify.club/join/T${Date.now().toString(36).toUpperCase()}`;
-
     // Upload banner to Supabase Storage if present
     let bannerUrl = null;
     if (form.bannerFile) {
@@ -127,7 +150,6 @@ export default function CreateTournamentPage() {
         add_livestream: form.addLivestream,
         add_var: form.addVAR,
         status: 'upcoming',
-        join_link: joinLink,
         banner_url: bannerUrl,
       })
       .select()
@@ -157,7 +179,7 @@ export default function CreateTournamentPage() {
     setSubmitted(true);
   };
 
-  if (submitted) return <SuccessScreen form={form} tournament={createdTournament} onBack={() => router.push('/')} />;
+  if (submitted) return <SuccessScreen form={form} onBack={() => { setForm(INITIAL); setStep(0); setSubmitted(false); setCreatedTournament(null); }} />;
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 14px 80px' }}>
@@ -440,7 +462,7 @@ function StepBasics({ form, set }) {
             <input className="input" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} style={{ color: form.startDate ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="Start Time">
-            <input className="input" type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)} style={{ color: form.startTime ? 'var(--text)' : 'transparent' }} />
+            <TimeSelect value={form.startTime} onChange={v => set('startTime', v)} />
           </Field>
           <Field label="End Date" required>
             <input
@@ -451,11 +473,7 @@ function StepBasics({ form, set }) {
             {endDateError && <FieldError>{endDateError}</FieldError>}
           </Field>
           <Field label="End Time">
-            <input
-              className="input" type="time" value={form.endTime}
-              onChange={e => set('endTime', e.target.value)}
-              style={{ color: form.endTime ? 'var(--text)' : 'transparent', borderColor: endTimeError ? 'var(--red)' : undefined }}
-            />
+            <TimeSelect value={form.endTime} onChange={v => set('endTime', v)} style={{ borderColor: endTimeError ? 'var(--red)' : undefined }} />
             {endTimeError && <FieldError>{endTimeError}</FieldError>}
           </Field>
         </div>
@@ -610,6 +628,9 @@ function toDatetimeLocal(date, time) {
   return date ? `${date}T${time || '00:00'}` : '';
 }
 
+const splitDT = (dt) => ({ date: dt ? dt.slice(0, 10) : '', time: dt ? dt.slice(11, 16) : '' });
+const joinDT = (date, time) => (date && time) ? `${date}T${time}` : '';
+
 function StepSchedule({ form, set }) {
   const allArenas = FACILITY_ARENAS[form.facilityId] || [];
   const arenaOptions = form.numArenas ? allArenas.slice(0, form.numArenas) : allArenas;
@@ -645,7 +666,7 @@ function StepSchedule({ form, set }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Section title="Add Match">
+      <Section title="Add Game">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Arena" required>
@@ -658,7 +679,7 @@ function StepSchedule({ form, set }) {
                 {arenaOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </Field>
-            <Field label="Match Label (optional)">
+            <Field label="Game Label (optional)">
               <input
                 className="input"
                 placeholder="QF1, Semi-Final A…"
@@ -668,20 +689,32 @@ function StepSchedule({ form, set }) {
             </Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Start Time" required>
+            <Field label="Start Date" required>
               <input
-                className="input"
-                type="datetime-local"
-                value={newGame.startTime}
-                onChange={e => setNewGame(g => ({ ...g, startTime: e.target.value }))}
+                className="input" type="date"
+                value={splitDT(newGame.startTime).date}
+                onChange={e => setNewGame(g => ({ ...g, startTime: joinDT(e.target.value, splitDT(g.startTime).time) }))}
+                style={{ color: splitDT(newGame.startTime).date ? 'var(--text)' : 'transparent' }}
+              />
+            </Field>
+            <Field label="Start Time" required>
+              <TimeSelect
+                value={splitDT(newGame.startTime).time}
+                onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(splitDT(g.startTime).date, v) }))}
+              />
+            </Field>
+            <Field label="End Date" required>
+              <input
+                className="input" type="date"
+                value={splitDT(newGame.endTime).date}
+                onChange={e => setNewGame(g => ({ ...g, endTime: joinDT(e.target.value, splitDT(g.endTime).time) }))}
+                style={{ color: splitDT(newGame.endTime).date ? 'var(--text)' : 'transparent' }}
               />
             </Field>
             <Field label="End Time" required>
-              <input
-                className="input"
-                type="datetime-local"
-                value={newGame.endTime}
-                onChange={e => setNewGame(g => ({ ...g, endTime: e.target.value }))}
+              <TimeSelect
+                value={splitDT(newGame.endTime).time}
+                onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(splitDT(g.endTime).date, v) }))}
                 style={{ borderColor: matchTimeError ? 'var(--red)' : undefined }}
               />
               {matchTimeError && <FieldError>{matchTimeError}</FieldError>}
@@ -703,7 +736,7 @@ function StepSchedule({ form, set }) {
               ) : (
                 <>
                   <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                  {needed} arena{needed > 1 ? 's' : ''} · {covered} match{covered !== 1 ? 'es' : ''} added{covered < needed ? ` · need ${needed - covered} more` : ''}
+                  {needed} arena{needed > 1 ? 's' : ''} · {covered} game{covered !== 1 ? 's' : ''} added{covered < needed ? ` · need ${needed - covered} more` : ''}
                 </>
               )}
             </div>
@@ -722,7 +755,7 @@ function StepSchedule({ form, set }) {
       </Section>
 
       {form.games.length > 0 && (
-        <Section title={`Matches (${form.games.length})`}>
+        <Section title={`Games (${form.games.length})`}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {form.games.map((g, i) => (
               <div key={g.id} style={{
@@ -788,14 +821,14 @@ function StepReview({ form }) {
       <ReviewSection title="Deliverables">
         <ReviewRow label="Package" value={pkg?.label} />
         <ReviewRow label="Includes" value={pkg?.deliverables.join(', ')} />
-        {form.addLivestream && <ReviewRow label="Livestream" value="₹250/hr per camera" accent />}
-        {form.addVAR && <ReviewRow label="VAR" value="Pricing TBD" />}
+        {form.addLivestream && <ReviewRow label="Livestream" value="Yes" />}
+        {form.addVAR && <ReviewRow label="VAR" value="Yes" />}
       </ReviewSection>
 
       {form.games.length > 0 && (
-        <ReviewSection title={`Schedule (${form.games.length} matches)`}>
+        <ReviewSection title={`Schedule (${form.games.length} games)`}>
           {form.games.map((g, i) => (
-            <ReviewRow key={g.id} label={`Match ${i + 1}`}
+            <ReviewRow key={g.id} label={`Game ${i + 1}`}
               value={`${g.arena}${g.label ? ` · ${g.label}` : ''} · ${fmt(g.startTime)} → ${fmt(g.endTime)}`} />
           ))}
         </ReviewSection>
@@ -814,7 +847,7 @@ function StepReview({ form }) {
           <polyline points="20 6 9 17 4 12" />
         </svg>
         <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-          Submitting will notify the HiFy team. A joining link will be generated for player registration once the setup is confirmed.
+          Submitting will notify the HiFy team. They will confirm the setup and reach out to you.
         </p>
       </div>
     </div>
@@ -856,9 +889,7 @@ function Spinner() {
   );
 }
 
-function SuccessScreen({ form, tournament, onBack }) {
-  const joinLink = tournament?.join_link ?? `hify.club/join/T${Date.now().toString(36).toUpperCase()}`;
-
+function SuccessScreen({ form, onBack }) {
   return (
     <div style={{
       maxWidth: 480, margin: '0 auto', padding: '48px 24px',
@@ -874,45 +905,14 @@ function SuccessScreen({ form, tournament, onBack }) {
         </svg>
       </div>
 
-      <h2 className="font-display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Tournament Created!</h2>
-      <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 24 }}>
-        <strong style={{ color: 'var(--text)' }}>{form.name}</strong> has been submitted to HiFy. The team will confirm the setup and send a player joining link.
+      <h2 className="font-display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Request Sent!</h2>
+      <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 28 }}>
+        Your tournament request for <strong style={{ color: 'var(--text)' }}>{form.name}</strong> has been sent to the HiFy team. We&apos;ll reach out to confirm the setup.
       </p>
 
-      {/* Join link preview */}
-      <div style={{
-        width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)',
-        borderRadius: 12, padding: '12px 16px', marginBottom: 24, textAlign: 'left',
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-          Player Joining Link (Preview)
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, color: 'var(--pink2)', fontWeight: 600, flex: 1 }}>
-            {joinLink}
-          </span>
-          <button className="btn-ghost" style={{ padding: '6px 10px', height: 'auto', fontSize: 11 }}
-            onClick={() => navigator.clipboard?.writeText(joinLink)}>
-            Copy
-          </button>
-        </div>
-        <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
-          Share this with players to register and enable face recognition before the event.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-        <button className="btn-ghost" onClick={onBack} style={{ flex: 1, height: 44, justifyContent: 'center' }}>
-          Back to Tournaments
-        </button>
-        <button className="btn-primary" style={{ flex: 1, height: 44, justifyContent: 'center' }}>
-          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-          </svg>
-          Share Link
-        </button>
-      </div>
+      <button className="btn-primary" onClick={onBack} style={{ width: '100%', height: 44, justifyContent: 'center' }}>
+        Submit Another Tournament
+      </button>
     </div>
   );
 }
