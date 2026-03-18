@@ -583,7 +583,7 @@ function StepBasics({ form, set }) {
               <polyline points="21 15 16 10 5 21" />
             </svg>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload banner or logo</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>PNG, JPG up to 10MB</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>PNG, JPG up to 100MB</div>
           </div>
         )}
       </Section>
