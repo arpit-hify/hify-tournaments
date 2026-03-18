@@ -500,7 +500,7 @@ function StepBasics({ form, set }) {
         <Field label="Tournament Name" required>
           <input
             className="input"
-            placeholder="Tournament name"
+            placeholder=""
             value={form.name}
             onChange={e => set('name', e.target.value)}
           />
