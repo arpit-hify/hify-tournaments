@@ -149,7 +149,7 @@ function SiteHeader() {
       position: 'sticky', top: 0, zIndex: 50,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-dark.png" alt="HiFy" style={{ height: 30, width: 'auto' }} />
+      <img src="/logo-dark.png" alt="HiFy" style={{ height: 40, width: 'auto' }} />
     </header>
   );
 }
