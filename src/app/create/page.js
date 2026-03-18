@@ -229,32 +229,36 @@ export default function CreateTournamentPage() {
   if (submitted) return <SuccessScreen form={form} onBack={() => { setForm(INITIAL); setStep(0); setSubmitted(false); setCreatedTournament(null); }} />;
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 14px 80px' }}>
+    <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 14px 80px' }}>
 
-      {/* Page title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <button
-          className="btn-icon"
-          onClick={() => step === 0 ? router.push('/') : goBack()}
-          aria-label="Back"
-        >
-          <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="font-display" style={{ fontSize: 18, fontWeight: 700 }}>Tournament Request</h1>
-          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
-            Step {step + 1} of {STEPS.length} · {STEPS[step].label}
-          </p>
+      {/* Sticky title + step bar */}
+      <div style={{
+        position: 'sticky',
+        top: 52,
+        zIndex: 40,
+        background: 'var(--bg)',
+        borderBottom: '1px solid var(--border)',
+        margin: '0 -14px',
+        padding: '10px 14px 14px',
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <button
+            className="btn-icon"
+            onClick={() => step === 0 ? router.push('/') : goBack()}
+            aria-label="Back"
+          >
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <h1 className="font-display" style={{ fontSize: 16, fontWeight: 700 }}>Tournament Request</h1>
         </div>
+        <StepBar step={step} />
       </div>
 
-      {/* Step progress */}
-      <StepBar step={step} />
-
       {/* Step content */}
-      <div className="slide-up" key={step} style={{ marginTop: 20 }}>
+      <div className="slide-up" key={step}>
         {step === 0 && <StepBasics form={form} set={set} />}
         {step === 1 && <StepDeliverables form={form} set={set} />}
         {step === 2 && <StepSchedule form={form} set={set} />}
@@ -589,9 +593,7 @@ function StepBasics({ form, set }) {
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload banner or logo</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>Upload the highest quality image available</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>This will be printed on large boards &amp; used as the app thumbnail</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload a high quality banner image</div>
           </div>
         )}
       </Section>
