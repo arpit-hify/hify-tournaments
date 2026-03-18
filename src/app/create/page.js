@@ -55,6 +55,7 @@ const INITIAL = {
   startTime: '',
   endDate: '',
   endTime: '',
+  numArenas: null,   // how many of the facility's arenas will be used
   participants: '',
   bannerFile: null,
   bannerPreview: null,
@@ -105,7 +106,8 @@ export default function CreateTournamentPage() {
       }
     }
 
-    const arenas = FACILITY_ARENAS[form.facilityId] || [];
+    const allFacilityArenas = FACILITY_ARENAS[form.facilityId] || [];
+    const arenas = form.numArenas ? allFacilityArenas.slice(0, form.numArenas) : allFacilityArenas;
 
     const { data: tournament, error: tError } = await supabase
       .from('tournaments')
@@ -394,6 +396,15 @@ function StepBasics({ form, set }) {
     reader.readAsDataURL(file);
   };
 
+  const endDateError = form.startDate && form.endDate && form.endDate < form.startDate
+    ? 'End date cannot be before start date'
+    : null;
+  const endTimeError = !endDateError
+    && form.startDate && form.endDate && form.startDate === form.endDate
+    && form.startTime && form.endTime && form.endTime <= form.startTime
+    ? 'End time must be after start time'
+    : null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Tournament Details">
@@ -432,15 +443,44 @@ function StepBasics({ form, set }) {
             <input className="input" type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)} style={{ color: form.startTime ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="End Date" required>
-            <input className="input" type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} style={{ color: form.endDate ? 'var(--text)' : 'transparent' }} />
+            <input
+              className="input" type="date" value={form.endDate}
+              onChange={e => set('endDate', e.target.value)}
+              style={{ color: form.endDate ? 'var(--text)' : 'transparent', borderColor: endDateError ? 'var(--red)' : undefined }}
+            />
+            {endDateError && <FieldError>{endDateError}</FieldError>}
           </Field>
           <Field label="End Time">
-            <input className="input" type="time" value={form.endTime} onChange={e => set('endTime', e.target.value)} style={{ color: form.endTime ? 'var(--text)' : 'transparent' }} />
+            <input
+              className="input" type="time" value={form.endTime}
+              onChange={e => set('endTime', e.target.value)}
+              style={{ color: form.endTime ? 'var(--text)' : 'transparent', borderColor: endTimeError ? 'var(--red)' : undefined }}
+            />
+            {endTimeError && <FieldError>{endTimeError}</FieldError>}
           </Field>
         </div>
       </Section>
 
       <Section title="Scope">
+        {form.facilityId && (() => {
+          const maxArenas = (FACILITY_ARENAS[form.facilityId] || []).length;
+          const current = form.numArenas ?? 1;
+          return (
+            <Field label="Arenas used for this tournament">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <CounterInput
+                  value={current}
+                  min={1}
+                  max={maxArenas}
+                  onChange={v => set('numArenas', v)}
+                />
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  of {maxArenas} available at this facility
+                </span>
+              </div>
+            </Field>
+          );
+        })()}
         <Field label="Expected Participants">
           <input
             className="input" type="number" min={1}
@@ -529,8 +569,6 @@ function StepDeliverables({ form, set }) {
           description="Live YouTube stream from each camera."
           checked={form.addLivestream}
           onChange={() => set('addLivestream', !form.addLivestream)}
-          badge="₹250/hr/camera"
-          badgeCls="badge-amber"
         />
         <div className="divider" style={{ margin: '10px 0' }} />
         <AddOnRow
@@ -539,15 +577,13 @@ function StepDeliverables({ form, set }) {
           description="Video review for disputed calls. For semis & finals."
           checked={form.addVAR}
           onChange={() => set('addVAR', !form.addVAR)}
-          badge="Pricing TBD"
-          badgeCls="badge-gray"
         />
       </Section>
     </div>
   );
 }
 
-function AddOnRow({ icon, label, description, checked, onChange, badge, badgeCls }) {
+function AddOnRow({ icon, label, description, checked, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
       <div style={{
@@ -556,9 +592,8 @@ function AddOnRow({ icon, label, description, checked, onChange, badge, badgeCls
         color: 'var(--muted)', flexShrink: 0,
       }}>{icon}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+        <div style={{ marginBottom: 3 }}>
           <span style={{ fontWeight: 700, fontSize: 13 }}>{label}</span>
-          <span className={`badge ${badgeCls}`} style={{ fontSize: 10 }}>{badge}</span>
         </div>
         <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>{description}</p>
       </div>
@@ -576,7 +611,8 @@ function toDatetimeLocal(date, time) {
 }
 
 function StepSchedule({ form, set }) {
-  const arenaOptions = FACILITY_ARENAS[form.facilityId] || [];
+  const allArenas = FACILITY_ARENAS[form.facilityId] || [];
+  const arenaOptions = form.numArenas ? allArenas.slice(0, form.numArenas) : allArenas;
   const [newGame, setNewGame] = useState({
     arena: '',
     startTime: toDatetimeLocal(form.startDate, form.startTime),
@@ -584,18 +620,17 @@ function StepSchedule({ form, set }) {
     label: '',
   });
 
+  const matchTimeError = newGame.startTime && newGame.endTime && newGame.endTime <= newGame.startTime
+    ? 'End time must be after start time'
+    : null;
+
   const addGame = () => {
-    if (!newGame.startTime || !newGame.endTime || !newGame.arena) return;
+    if (!newGame.startTime || !newGame.endTime || !newGame.arena || matchTimeError) return;
     set('games', [...form.games, { ...newGame, id: Date.now() }]);
     setNewGame(g => ({ ...g, arena: '' }));
   };
 
   const removeGame = (id) => set('games', form.games.filter(g => g.id !== id));
-
-  // Populate the add-match form from a duplicated match; arena stays blank
-  const duplicateToForm = (g) => {
-    setNewGame({ arena: '', startTime: g.startTime, endTime: g.endTime, label: g.label });
-  };
 
   const covered = form.games.length;
   const needed = arenaOptions.length;
@@ -640,7 +675,9 @@ function StepSchedule({ form, set }) {
                 type="datetime-local"
                 value={newGame.endTime}
                 onChange={e => setNewGame(g => ({ ...g, endTime: e.target.value }))}
+                style={{ borderColor: matchTimeError ? 'var(--red)' : undefined }}
               />
+              {matchTimeError && <FieldError>{matchTimeError}</FieldError>}
             </Field>
           </div>
 
@@ -668,7 +705,7 @@ function StepSchedule({ form, set }) {
           <button
             className="btn-ghost"
             onClick={addGame}
-            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena}
+            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena || !!matchTimeError}
             style={{ width: '100%', justifyContent: 'center', height: 38 }}
           >
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -702,24 +739,6 @@ function StepSchedule({ form, set }) {
                     {fmt(g.startTime)} → {fmt(g.endTime)}
                   </div>
                 </div>
-                {/* Duplicate button — fills the form above */}
-                <button
-                  onClick={() => duplicateToForm(g)}
-                  title="Copy to form"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    background: 'var(--surface)', border: '1px solid var(--border)',
-                    borderRadius: 7, padding: '4px 8px',
-                    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
-                    cursor: 'pointer', flexShrink: 0,
-                  }}
-                >
-                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                  </svg>
-                  Duplicate
-                </button>
                 {/* Remove button */}
                 <button
                   onClick={() => removeGame(g.id)}
@@ -921,8 +940,61 @@ function Field({ label, required, children }) {
   );
 }
 
+function CounterInput({ value, onChange, min = 1, max = 20 }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      background: 'var(--surface2)', border: '1px solid var(--border)',
+      borderRadius: 10, overflow: 'hidden', height: 42, width: 120,
+    }}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+        style={{
+          width: 42, height: '100%', border: 'none', background: 'none',
+          fontSize: 18, color: value <= min ? 'var(--border)' : 'var(--text)',
+          cursor: value <= min ? 'default' : 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >−</button>
+      <div style={{
+        flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 15,
+        color: 'var(--text)', userSelect: 'none',
+      }}>{value}</div>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+        style={{
+          width: 42, height: '100%', border: 'none', background: 'none',
+          fontSize: 18, color: value >= max ? 'var(--border)' : 'var(--text)',
+          cursor: value >= max ? 'default' : 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >+</button>
+    </div>
+  );
+}
+
+function FieldError({ children }) {
+  return (
+    <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+      <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      {children}
+    </div>
+  );
+}
+
 function isStepValid(step, form) {
-  if (step === 0) return form.name && form.sport && form.facilityId && form.startDate && form.endDate;
+  if (step === 0) {
+    if (!form.name || !form.sport || !form.facilityId || !form.startDate || !form.endDate) return false;
+    if (form.endDate < form.startDate) return false;
+    if (form.startDate === form.endDate && form.startTime && form.endTime && form.endTime <= form.startTime) return false;
+    return true;
+  }
   return true;
 }
 
