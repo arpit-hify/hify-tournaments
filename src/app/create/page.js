@@ -231,7 +231,7 @@ export default function CreateTournamentPage() {
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 14px 80px' }}>
 
-      {/* Sticky header: back + logo + step dots */}
+      {/* Sticky header: back + logo */}
       <header style={{
         position: 'sticky',
         top: 0,
@@ -241,29 +241,29 @@ export default function CreateTournamentPage() {
         height: 52,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: 10,
         margin: '0 -14px',
         padding: '0 14px',
         marginBottom: 24,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            className="btn-icon"
-            onClick={() => step === 0 ? router.push('/') : goBack()}
-            aria-label="Back"
-          >
-            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
-        </div>
-        <StepDots step={step} />
+        <button
+          className="btn-icon"
+          onClick={() => step === 0 ? router.push('/') : goBack()}
+          aria-label="Back"
+        >
+          <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
       </header>
 
+      {/* Step progress */}
+      <StepBar step={step} />
+
       {/* Step content */}
-      <div className="slide-up" key={step}>
+      <div className="slide-up" key={step} style={{ marginTop: 20 }}>
         {step === 0 && <StepBasics form={form} set={set} />}
         {step === 1 && <StepDeliverables form={form} set={set} />}
         {step === 2 && <StepSchedule form={form} set={set} />}
