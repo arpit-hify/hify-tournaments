@@ -8,26 +8,60 @@ import { FACILITIES } from '@/lib/facilities';
 
 const ADMIN_PASSWORD = 'hify2026';
 
-const TIME_SLOTS = (() => {
+const TIME_12H = (() => {
   const slots = [];
-  for (let h = 0; h < 24; h++) {
+  for (let h = 0; h < 12; h++) {
     for (let m = 0; m < 60; m += 15) {
       const hh = String(h).padStart(2, '0');
       const mm = String(m).padStart(2, '0');
-      const ampm = h < 12 ? 'AM' : 'PM';
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      slots.push({ value: `${hh}:${mm}`, label: `${h12}:${mm} ${ampm}` });
+      slots.push({ value: `${hh}:${mm}`, label: `${h === 0 ? 12 : h}:${mm}` });
     }
   }
   return slots;
 })();
 
-function TimeSelect({ value, onChange }) {
+function TimePicker({ value, onChange }) {
+  const parse = (v) => {
+    if (!v) return { h12: '', ampm: 'AM' };
+    const [h, m] = v.split(':').map(Number);
+    return {
+      h12: `${String(h % 12).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      ampm: h < 12 ? 'AM' : 'PM',
+    };
+  };
+  const build = (h12, ampm) => {
+    if (!h12) return '';
+    const [h, m] = h12.split(':').map(Number);
+    const h24 = ampm === 'AM' ? h : h + 12;
+    return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  const { h12, ampm } = parse(value);
   return (
-    <select className="input" value={value || ''} onChange={e => onChange(e.target.value)}>
-      <option value="" disabled />
-      {TIME_SLOTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-    </select>
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select
+        className="input"
+        style={{ flex: 1 }}
+        value={h12}
+        onChange={e => onChange(build(e.target.value, ampm))}
+      >
+        <option value="" disabled />
+        {TIME_12H.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+      </select>
+      <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+        {['AM', 'PM'].map(p => (
+          <button key={p} type="button"
+            onClick={() => onChange(build(h12 || '00:00', p))}
+            style={{
+              padding: '0 10px', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+              background: ampm === p ? 'var(--accent)' : 'var(--surface2)',
+              color: ampm === p ? '#fff' : 'var(--muted)',
+              transition: 'background 0.15s',
+            }}
+          >{p}</button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -603,13 +637,13 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
             <input className="input" type="date" value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)} />
           </EditField>
           <EditField label="Start Time">
-            <TimeSelect value={form.start_time ?? ''} onChange={v => set('start_time', v)} />
+            <TimePicker value={form.start_time ?? ''} onChange={v => set('start_time', v)} />
           </EditField>
           <EditField label="End Date">
             <input className="input" type="date" value={form.end_date ?? ''} onChange={e => set('end_date', e.target.value)} />
           </EditField>
           <EditField label="End Time">
-            <TimeSelect value={form.end_time ?? ''} onChange={v => set('end_time', v)} />
+            <TimePicker value={form.end_time ?? ''} onChange={v => set('end_time', v)} />
           </EditField>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

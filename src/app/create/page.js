@@ -43,28 +43,62 @@ const STEPS = [
   { id: 'review', label: 'Review' },
 ];
 
-// ─── Time slots (15-min intervals, full day) ──────────────────────────────────
+// ─── Time picker (12-hr dropdown + AM/PM toggle) ─────────────────────────────
 
-const TIME_SLOTS = (() => {
+const TIME_12H = (() => {
   const slots = [];
-  for (let h = 0; h < 24; h++) {
+  for (let h = 0; h < 12; h++) {
     for (let m = 0; m < 60; m += 15) {
       const hh = String(h).padStart(2, '0');
       const mm = String(m).padStart(2, '0');
-      const ampm = h < 12 ? 'AM' : 'PM';
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      slots.push({ value: `${hh}:${mm}`, label: `${h12}:${mm} ${ampm}` });
+      slots.push({ value: `${hh}:${mm}`, label: `${h === 0 ? 12 : h}:${mm}` });
     }
   }
   return slots;
 })();
 
-function TimeSelect({ value, onChange, style }) {
+function TimePicker({ value, onChange, error }) {
+  const parse = (v) => {
+    if (!v) return { h12: '', ampm: 'AM' };
+    const [h, m] = v.split(':').map(Number);
+    return {
+      h12: `${String(h % 12).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      ampm: h < 12 ? 'AM' : 'PM',
+    };
+  };
+  const build = (h12, ampm) => {
+    if (!h12) return '';
+    const [h, m] = h12.split(':').map(Number);
+    const h24 = ampm === 'AM' ? h : h + 12;
+    return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  const { h12, ampm } = parse(value);
   return (
-    <select className="input" value={value || ''} onChange={e => onChange(e.target.value)} style={style}>
-      <option value="" disabled />
-      {TIME_SLOTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-    </select>
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select
+        className="input"
+        style={{ flex: 1, borderColor: error ? 'var(--red)' : undefined }}
+        value={h12}
+        onChange={e => onChange(build(e.target.value, ampm))}
+      >
+        <option value="" disabled />
+        {TIME_12H.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+      </select>
+      <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: `1px solid ${error ? 'var(--red)' : 'var(--border)'}`, flexShrink: 0 }}>
+        {['AM', 'PM'].map(p => (
+          <button key={p} type="button"
+            onClick={() => onChange(build(h12 || '00:00', p))}
+            style={{
+              padding: '0 10px', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+              background: ampm === p ? 'var(--accent)' : 'var(--surface2)',
+              color: ampm === p ? '#fff' : 'var(--muted)',
+              transition: 'background 0.15s',
+            }}
+          >{p}</button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -462,7 +496,7 @@ function StepBasics({ form, set }) {
             <input className="input" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} style={{ color: form.startDate ? 'var(--text)' : 'transparent' }} />
           </Field>
           <Field label="Start Time">
-            <TimeSelect value={form.startTime} onChange={v => set('startTime', v)} />
+            <TimePicker value={form.startTime} onChange={v => set('startTime', v)} />
           </Field>
           <Field label="End Date" required>
             <input
@@ -473,7 +507,7 @@ function StepBasics({ form, set }) {
             {endDateError && <FieldError>{endDateError}</FieldError>}
           </Field>
           <Field label="End Time">
-            <TimeSelect value={form.endTime} onChange={v => set('endTime', v)} style={{ borderColor: endTimeError ? 'var(--red)' : undefined }} />
+            <TimePicker value={form.endTime} onChange={v => set('endTime', v)} error={!!endTimeError} />
             {endTimeError && <FieldError>{endTimeError}</FieldError>}
           </Field>
         </div>
@@ -698,7 +732,7 @@ function StepSchedule({ form, set }) {
               />
             </Field>
             <Field label="Start Time" required>
-              <TimeSelect
+              <TimePicker
                 value={splitDT(newGame.startTime).time}
                 onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(splitDT(g.startTime).date, v) }))}
               />
@@ -712,10 +746,10 @@ function StepSchedule({ form, set }) {
               />
             </Field>
             <Field label="End Time" required>
-              <TimeSelect
+              <TimePicker
                 value={splitDT(newGame.endTime).time}
                 onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(splitDT(g.endTime).date, v) }))}
-                style={{ borderColor: matchTimeError ? 'var(--red)' : undefined }}
+                error={!!matchTimeError}
               />
               {matchTimeError && <FieldError>{matchTimeError}</FieldError>}
             </Field>
