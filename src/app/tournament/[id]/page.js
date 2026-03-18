@@ -16,6 +16,14 @@ function fmt(s) {
   return d.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  return `${dd}/${mon}/${d.getFullYear()}`;
+}
+
 function formatTime(timeStr) {
   if (!timeStr) return '—';
   const [h, m] = timeStr.split(':');
@@ -202,7 +210,7 @@ export default function TournamentDetailPage() {
       {/* Timing */}
       <div className="card" style={{ padding: '14px 16px' }}>
         <SectionTitle>Event Timing</SectionTitle>
-        <InfoRow label="Date" value={t.start_date === t.end_date ? t.start_date : `${t.start_date} → ${t.end_date}`} />
+        <InfoRow label="Date" value={t.start_date === t.end_date ? formatDate(t.start_date) : `${formatDate(t.start_date)} → ${formatDate(t.end_date)}`} />
         <InfoRow label="Time" value={`${formatTime(t.start_time)} – ${formatTime(t.end_time)}`} />
         {t.notes && <InfoRow label="Notes" value={t.notes} />}
       </div>

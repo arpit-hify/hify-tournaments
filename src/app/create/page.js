@@ -869,6 +869,14 @@ function fmt(s) {
 
 // ─── Step 4: Review ───────────────────────────────────────────────────────────
 
+function fmtDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  return `${dd}/${mon}/${d.getFullYear()}`;
+}
+
 function StepReview({ form }) {
   const pkg = PACKAGES.find(p => p.id === form.packageId);
 
@@ -878,7 +886,7 @@ function StepReview({ form }) {
         <ReviewRow label="Name" value={form.name} />
         <ReviewRow label="Sport" value={form.sport} />
         <ReviewRow label="Facility" value={form.facilityName} />
-        <ReviewRow label="Date" value={form.startDate ? `${form.startDate} → ${form.endDate || form.startDate}` : '—'} />
+        <ReviewRow label="Date" value={form.startDate ? (form.startDate === form.endDate ? fmtDate(form.startDate) : `${fmtDate(form.startDate)} → ${fmtDate(form.endDate || form.startDate)}`) : '—'} />
         <ReviewRow label="Time" value={`${form.startTime} – ${form.endTime}`} />
         <ReviewRow label="Participants" value={form.participants ? `~${form.participants} players` : '—'} />
         {form.notes && <ReviewRow label="Notes" value={form.notes} />}

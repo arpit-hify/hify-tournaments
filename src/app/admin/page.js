@@ -88,7 +88,9 @@ const SPORT_EMOJI = {
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  return `${dd}/${mon}/${d.getFullYear()}`;
 }
 
 function formatTime(timeStr) {
@@ -580,7 +582,7 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
             <span style={{ color: 'var(--text)', fontWeight: 500, textTransform: 'capitalize' }}>{t.status}</span>
           )}
         </div>
-        <DetailRow label="Submitted" value={new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} />
+        <DetailRow label="Submitted" value={(() => { const d = new Date(t.created_at); const dd = String(d.getDate()).padStart(2,'0'); const mon = d.toLocaleString('en-US',{month:'short'}); const time = d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); return `${dd}/${mon}/${d.getFullYear()} at ${time}`; })()} />
       </DetailCard>
 
       <DetailCard title="Deliverables">
