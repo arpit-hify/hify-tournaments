@@ -445,7 +445,7 @@ function DateInput({ value, onChange, error }) {
       }}
       onClick={() => ref.current?.showPicker?.()}
     >
-      {value ? fmtDateDisplay(value) : ''}
+      {value ? fmtDateDisplay(value) : <span style={{ visibility: 'hidden' }}>00/Jan/0000</span>}
       <input
         ref={ref}
         type="date"
