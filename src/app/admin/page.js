@@ -5,6 +5,40 @@ import JSZip from 'jszip';
 import { supabase, PACKAGES } from '@/lib/supabase';
 import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+function fmtDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  return `${dd}/${mon}/${d.getFullYear()}`;
+}
+
+function DateInput({ value, onChange, error }) {
+  const ref = useRef(null);
+  return (
+    <div
+      className="input"
+      style={{
+        position: 'relative', cursor: 'pointer',
+        color: value ? 'var(--text)' : 'var(--muted)',
+        borderColor: error ? 'var(--red)' : undefined,
+      }}
+      onClick={() => ref.current?.showPicker?.()}
+    >
+      {value ? fmtDateDisplay(value) : <span style={{ visibility: 'hidden' }}>00/Jan/0000</span>}
+      <input
+        ref={ref}
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+      />
+    </div>
+  );
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ADMIN_PASSWORD = 'hify2026';
@@ -820,13 +854,13 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <EditField label="Start Date">
-            <input className="input" type="date" value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)} />
+            <DateInput value={form.start_date ?? ''} onChange={v => set('start_date', v)} />
           </EditField>
           <EditField label="Start Time">
             <TimePicker value={form.start_time ?? ''} onChange={v => set('start_time', v)} />
           </EditField>
           <EditField label="End Date">
-            <input className="input" type="date" value={form.end_date ?? ''} onChange={e => set('end_date', e.target.value)} />
+            <DateInput value={form.end_date ?? ''} onChange={v => set('end_date', v)} />
           </EditField>
           <EditField label="End Time">
             <TimePicker value={form.end_time ?? ''} onChange={v => set('end_time', v)} />
@@ -910,7 +944,7 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <label className="label">Start Date</label>
-                  <input className="input" type="date" value={st.date} onChange={e => setGame(idx, 'start_time', joinGameTime(e.target.value, st.time))} />
+                  <DateInput value={st.date} onChange={v => setGame(idx, 'start_time', joinGameTime(v, st.time))} />
                 </div>
                 <div>
                   <label className="label">Start Time</label>
@@ -918,7 +952,7 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
                 </div>
                 <div>
                   <label className="label">End Date</label>
-                  <input className="input" type="date" value={et.date} onChange={e => setGame(idx, 'end_time', joinGameTime(e.target.value, et.time))} />
+                  <DateInput value={et.date} onChange={v => setGame(idx, 'end_time', joinGameTime(v, et.time))} />
                 </div>
                 <div>
                   <label className="label">End Time</label>
