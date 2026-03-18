@@ -5,14 +5,35 @@ import { supabase, PACKAGES } from '@/lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const ADMIN_PASSWORD = 'hify2026';
+
 const SPORTS = ['Pickleball', 'Padel', 'Football', 'Cricket', 'Badminton'];
 
 const FACILITIES = [
-  { id: 'f1', name: 'Arena 4 – Pickleball Court', city: 'Mumbai' },
-  { id: 'f2', name: 'Arena 3 – Pickleball Court', city: 'Mumbai' },
-  { id: 'f3', name: 'The Courtside', city: 'Mumbai' },
-  { id: 'f4', name: 'Game Society', city: 'Mumbai' },
-  { id: 'f5', name: 'The Courtyard', city: 'Mumbai' },
+  { id: 1,   name: 'Urbansports Shaktimills',       city: 'Mumbai' },
+  { id: 5,   name: 'Score Indoor Pickleball',        city: 'Mumbai' },
+  { id: 6,   name: 'Score Marwah - Sakinaka',        city: 'Mumbai' },
+  { id: 7,   name: 'Torba Pali Hill',                city: 'Mumbai' },
+  { id: 8,   name: 'Padel Project - Powai',          city: 'Mumbai' },
+  { id: 9,   name: 'The CourtRoom',                  city: 'Mumbai' },
+  { id: 10,  name: 'Shuttle Whizz Badminton',        city: 'Mumbai' },
+  { id: 12,  name: 'LvL One Pickleball',             city: 'Mumbai' },
+  { id: 13,  name: 'ACE PADEL',                      city: 'Mumbai' },
+  { id: 43,  name: 'Serve Society',                  city: 'Mumbai' },
+  { id: 44,  name: 'KickForAll',                     city: 'Mumbai' },
+  { id: 76,  name: 'Hurdles Ghatkopar',              city: 'Mumbai' },
+  { id: 109, name: 'Common grounds Thane',           city: 'Thane' },
+  { id: 142, name: 'Epic Play',                      city: 'Mumbai' },
+  { id: 175, name: 'Hurdles Chembur',                city: 'Mumbai' },
+  { id: 208, name: 'Arena X - Pickleball Court',     city: 'Pune' },
+  { id: 209, name: 'The Pickle Point',               city: 'Pune' },
+  { id: 210, name: 'GoRally Pickleball Sarjapur',    city: 'Bengaluru' },
+  { id: 211, name: 'GoRally Pickleball Jayamahal',   city: 'Bengaluru' },
+  { id: 241, name: 'Pickleball Arena',               city: 'Mumbai' },
+  { id: 274, name: 'Iron Pickleball',                city: 'Mumbai' },
+  { id: 307, name: 'Courtside',                      city: 'Mumbai' },
+  { id: 340, name: 'Padelverse Ranibaug',            city: 'Mumbai' },
+  { id: 373, name: '11 Point Club',                  city: 'Bengaluru' },
 ];
 
 const PACKAGES_LIST = [
@@ -43,11 +64,15 @@ function formatTime(timeStr) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
+  const [locked, setLocked] = useState(true);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(null); // full tournament object with games
+  const [selected, setSelected] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -55,8 +80,60 @@ export default function AdminPage() {
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    loadTournaments();
+    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_auth') === 'true') {
+      setLocked(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!locked) loadTournaments();
+  }, [locked]);
+
+  function handleUnlock(e) {
+    e.preventDefault();
+    if (pwInput === ADMIN_PASSWORD) {
+      sessionStorage.setItem('admin_auth', 'true');
+      setLocked(false);
+      setPwError(false);
+    } else {
+      setPwError(true);
+      setPwInput('');
+    }
+  }
+
+  if (locked) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--bg)', padding: 24,
+      }}>
+        <div style={{ width: '100%', maxWidth: 340, textAlign: 'center' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 32, marginBottom: 28 }} />
+          <div className="card" style={{ padding: '28px 24px' }}>
+            <h2 className="font-display" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Admin Access</h2>
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Enter password to continue</p>
+            <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                className="input"
+                type="password"
+                placeholder="Password"
+                value={pwInput}
+                onChange={e => { setPwInput(e.target.value); setPwError(false); }}
+                autoFocus
+              />
+              {pwError && (
+                <p style={{ fontSize: 12, color: 'var(--red)', textAlign: 'center' }}>Incorrect password</p>
+              )}
+              <button type="submit" className="btn-primary" style={{ height: 44, justifyContent: 'center' }}>
+                Unlock
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function loadTournaments() {
     setLoading(true);
