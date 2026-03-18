@@ -405,9 +405,6 @@ function StepBasics({ form, set }) {
 // ─── Step 2: Deliverables ─────────────────────────────────────────────────────
 
 function StepDeliverables({ form, set }) {
-  const pkg = PACKAGES.find(p => p.id === form.packageId);
-  const perPlayer = parseInt(form.participants || 0);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Highlights Package">
@@ -422,14 +419,7 @@ function StepDeliverables({ form, set }) {
                 <div className="option-radio-dot" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', lineHeight: 1.3 }}>{p.label}</div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, color: 'var(--pink2)',
-                    background: 'rgba(255,107,53,0.12)', borderRadius: 6,
-                    padding: '2px 7px', whiteSpace: 'nowrap',
-                  }}>{p.price}</span>
-                </div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', lineHeight: 1.3 }}>{p.label}</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
                   {p.deliverables.map(d => (
                     <span key={d} className="badge badge-gray" style={{ fontSize: 10 }}>{d}</span>
@@ -463,26 +453,6 @@ function StepDeliverables({ form, set }) {
         />
       </Section>
 
-      {/* Pricing summary */}
-      {perPlayer > 0 && pkg && (
-        <div className="card" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
-            Estimated Cost
-          </div>
-          <PricingRow label={`${pkg.label.split(' –')[0].trim()} (${perPlayer} players × ${pkg.price.split('/')[0]})`}
-            value={`${parseInt(pkg.price.replace(/[^\d]/g, '')) * perPlayer}`} />
-          {form.addLivestream && (
-            <PricingRow label={`Livestream (${form.numArenas} camera${form.numArenas > 1 ? 's' : ''} × ₹250/hr)`} value="TBD" muted />
-          )}
-          {form.addVAR && <PricingRow label="VAR" value="TBD" muted />}
-          <div className="divider" style={{ margin: '10px 0' }} />
-          <PricingRow
-            label="Highlights + Player Cards"
-            value={`₹${(parseInt(pkg.price.replace(/[^\d]/g, '')) * perPlayer).toLocaleString('en-IN')}`}
-            bold
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -505,15 +475,6 @@ function AddOnRow({ icon, label, description, checked, onChange, badge, badgeCls
       <div className={`toggle ${checked ? 'on' : ''}`} onClick={onChange} style={{ marginTop: 2 }}>
         <div className="toggle-thumb" />
       </div>
-    </div>
-  );
-}
-
-function PricingRow({ label, value, bold, muted }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-      <span style={{ color: muted ? 'var(--muted)' : 'var(--text)', fontWeight: bold ? 700 : 400 }}>{label}</span>
-      <span style={{ fontWeight: bold ? 700 : 600, color: bold ? 'var(--text)' : 'var(--muted)' }}>{value}</span>
     </div>
   );
 }
