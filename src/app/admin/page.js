@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import JSZip from 'jszip';
 import { supabase, PACKAGES } from '@/lib/supabase';
-import { FACILITIES } from '@/lib/facilities';
+import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -200,7 +201,12 @@ export default function AdminPage() {
   }
 
   function startEdit() {
-    setEditForm({ ...selected });
+    setEditForm({
+      ...selected,
+      games: selected.games ?? [],
+      _newBannerFiles: [],
+      _newBannerPreviews: [],
+    });
     setEditing(true);
   }
 
@@ -212,6 +218,25 @@ export default function AdminPage() {
   async function saveEdit() {
     if (!editForm) return;
     setSaving(true);
+
+    // Upload any new banner files
+    const newUrls = [];
+    for (const file of (editForm._newBannerFiles || [])) {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('tournament-banners')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('tournament-banners').getPublicUrl(fileName);
+        newUrls.push(urlData.publicUrl);
+      }
+    }
+    const existingUrls = editForm.banner_urls?.length
+      ? editForm.banner_urls
+      : (editForm.banner_url ? [editForm.banner_url] : []);
+    const allUrls = [...existingUrls, ...newUrls];
+
     const { error } = await supabase
       .from('tournaments')
       .update({
@@ -231,12 +256,33 @@ export default function AdminPage() {
         add_var: editForm.add_var,
         status: editForm.status,
         join_link: editForm.join_link,
+        banner_url: allUrls[0] || null,
+        banner_urls: allUrls,
       })
       .eq('id', editForm.id);
+
     if (!error) {
+      // Save games: delete all existing, re-insert
+      await supabase.from('games').delete().eq('tournament_id', editForm.id);
+      if ((editForm.games || []).length > 0) {
+        await supabase.from('games').insert(
+          editForm.games.map(g => ({
+            tournament_id: editForm.id,
+            arena: g.arena,
+            label: g.label || null,
+            start_time: g.start_time || null,
+            end_time: g.end_time || null,
+          }))
+        );
+      }
+
+      const updatedGames = editForm.games || [];
       const updated = {
         ...selected,
         ...editForm,
+        games: updatedGames,
+        banner_url: allUrls[0] || null,
+        banner_urls: allUrls,
         facility_name: FACILITIES.find(f => f.id === editForm.facility_id)?.name ?? editForm.facility_name,
       };
       setSelected(updated);
@@ -275,6 +321,10 @@ export default function AdminPage() {
     const toUTC = (date, time) =>
       date && time ? new Date(`${date}T${time}`).toISOString() : null;
 
+    const bannerUrls = verified.banner_urls?.length
+      ? verified.banner_urls
+      : (verified.banner_url ? [verified.banner_url] : []);
+
     const exportData = {
       id: verified.id,
       name: verified.name,
@@ -291,7 +341,7 @@ export default function AdminPage() {
       add_var: verified.add_var,
       notes: verified.notes,
       join_link: verified.join_link,
-      banner_url: verified.banner_url,
+      banner_urls: bannerUrls,
       status: verified.status,
       verified: true,
       created_at: new Date(verified.created_at).toISOString(),
@@ -303,31 +353,24 @@ export default function AdminPage() {
       })),
     };
 
-    // Download JSON
-    const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const jsonUrl = URL.createObjectURL(jsonBlob);
-    const jsonA = document.createElement('a');
-    jsonA.href = jsonUrl;
-    jsonA.download = `tournament-${verified.id}.json`;
-    jsonA.click();
-    URL.revokeObjectURL(jsonUrl);
-
-    // Download banner image if present
-    if (verified.banner_url) {
+    // Build ZIP with JSON + all banner images
+    const zip = new JSZip();
+    zip.file(`tournament-${verified.id}.json`, JSON.stringify(exportData, null, 2));
+    await Promise.all(bannerUrls.map(async (url, idx) => {
       try {
-        const res = await fetch(verified.banner_url);
+        const res = await fetch(url);
         const blob = await res.blob();
-        const ext = verified.banner_url.split('.').pop().split('?')[0] || 'jpg';
-        const imgUrl = URL.createObjectURL(blob);
-        const imgA = document.createElement('a');
-        imgA.href = imgUrl;
-        imgA.download = `banner-${verified.id}.${ext}`;
-        imgA.click();
-        URL.revokeObjectURL(imgUrl);
-      } catch {
-        // Banner download failed silently — URL still in JSON
-      }
-    }
+        const ext = url.split('.').pop().split('?')[0] || 'jpg';
+        zip.file(`banner-${idx + 1}.${ext}`, blob);
+      } catch { /* skip failed images */ }
+    }));
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = zipUrl;
+    a.download = `tournament-${verified.id}.zip`;
+    a.click();
+    URL.revokeObjectURL(zipUrl);
 
     setVerifying(false);
   }
@@ -539,12 +582,19 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
         </div>
       </div>
 
-      {/* Banner */}
-      {t.banner_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={t.banner_url} alt="Tournament banner"
-          style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', maxHeight: 200, objectFit: 'cover', marginBottom: 16 }} />
-      )}
+      {/* Banners */}
+      {(() => {
+        const urls = t.banner_urls?.length ? t.banner_urls : (t.banner_url ? [t.banner_url] : []);
+        return urls.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {urls.map((url, idx) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={idx} src={url} alt={`Banner ${idx + 1}`}
+                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', maxHeight: 200, objectFit: 'cover' }} />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Details grid */}
       <DetailCard title="Tournament Details">
@@ -658,9 +708,9 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
           )}
         </button>
       </div>
-      {t.banner_url && !t.verified && (
+      {!t.verified && (
         <p style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 8 }}>
-          Downloads JSON + banner image
+          Downloads a ZIP with JSON + all banner images
         </p>
       )}
     </div>
@@ -669,8 +719,74 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
 
 // ─── Edit Panel ───────────────────────────────────────────────────────────────
 
+const splitGameTime = (iso) => {
+  if (!iso) return { date: '', time: '' };
+  const d = new Date(iso);
+  const date = d.toLocaleDateString('en-CA');
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return { date, time: `${h}:${m}` };
+};
+const joinGameTime = (date, time) => (date && time) ? `${date}T${time}` : null;
+
 function EditPanel({ form, setForm, onSave, onCancel, saving }) {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const fileRef = useRef(null);
+
+  const handleBannerAdd = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const previews = await Promise.all(files.map(file => new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(file);
+    })));
+    setForm(f => ({
+      ...f,
+      _newBannerFiles: [...(f._newBannerFiles || []), ...files],
+      _newBannerPreviews: [...(f._newBannerPreviews || []), ...previews],
+    }));
+    e.target.value = '';
+  };
+
+  const removeExistingBanner = (idx) => {
+    setForm(f => ({
+      ...f,
+      banner_urls: (f.banner_urls || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const removeNewBanner = (idx) => {
+    setForm(f => ({
+      ...f,
+      _newBannerFiles: (f._newBannerFiles || []).filter((_, i) => i !== idx),
+      _newBannerPreviews: (f._newBannerPreviews || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const setGame = (idx, key, val) => {
+    setForm(f => ({
+      ...f,
+      games: f.games.map((g, i) => i === idx ? { ...g, [key]: val } : g),
+    }));
+  };
+
+  const addGame = () => {
+    const arenas = FACILITY_ARENAS[form.facility_id] || [];
+    setForm(f => ({
+      ...f,
+      games: [...f.games, { arena: arenas[0] || '', label: '', start_time: null, end_time: null }],
+    }));
+  };
+
+  const removeGame = (idx) => {
+    setForm(f => ({ ...f, games: f.games.filter((_, i) => i !== idx) }));
+  };
+
+  const existingBannerUrls = form.banner_urls?.length
+    ? form.banner_urls
+    : (form.banner_url ? [form.banner_url] : []);
+  const arenas = FACILITY_ARENAS[form.facility_id] || [];
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '24px 24px 80px' }}>
@@ -759,6 +875,95 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
             <option value="completed">Completed</option>
           </select>
         </EditField>
+      </EditCard>
+
+      {/* Game Schedule */}
+      <EditCard title={`Game Schedule (${(form.games || []).length} games)`}>
+        {(form.games || []).map((g, idx) => {
+          const st = splitGameTime(g.start_time);
+          const et = splitGameTime(g.end_time);
+          return (
+            <div key={idx} style={{
+              padding: '10px 12px', borderRadius: 10,
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>Game {idx + 1}</span>
+                <button type="button" onClick={() => removeGame(idx)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: 11, fontWeight: 600,
+                }}>Remove</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label className="label">Arena</label>
+                  <select className="input" value={g.arena} onChange={e => setGame(idx, 'arena', e.target.value)}>
+                    {arenas.map(a => <option key={a} value={a}>{a}</option>)}
+                    {!arenas.includes(g.arena) && g.arena && <option value={g.arena}>{g.arena}</option>}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Label (optional)</label>
+                  <input className="input" value={g.label || ''} onChange={e => setGame(idx, 'label', e.target.value)} placeholder="e.g. Semi Final" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label className="label">Start Date</label>
+                  <input className="input" type="date" value={st.date} onChange={e => setGame(idx, 'start_time', joinGameTime(e.target.value, st.time))} />
+                </div>
+                <div>
+                  <label className="label">Start Time</label>
+                  <TimePicker value={st.time} onChange={v => setGame(idx, 'start_time', joinGameTime(st.date, v))} />
+                </div>
+                <div>
+                  <label className="label">End Date</label>
+                  <input className="input" type="date" value={et.date} onChange={e => setGame(idx, 'end_time', joinGameTime(e.target.value, et.time))} />
+                </div>
+                <div>
+                  <label className="label">End Time</label>
+                  <TimePicker value={et.time} onChange={v => setGame(idx, 'end_time', joinGameTime(et.date, v))} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <button type="button" className="btn-ghost" onClick={addGame}
+          style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
+          + Add Game
+        </button>
+      </EditCard>
+
+      {/* Banners */}
+      <EditCard title={`Banners (${existingBannerUrls.length + (form._newBannerPreviews?.length || 0)})`}>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/*" multiple style={{ display: 'none' }} onChange={handleBannerAdd} />
+        {existingBannerUrls.map((url, idx) => (
+          <div key={idx} style={{ position: 'relative' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`Banner ${idx + 1}`} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', maxHeight: 160, objectFit: 'cover' }} />
+            <button onClick={() => removeExistingBanner(idx)} style={{
+              position: 'absolute', top: 8, right: 8,
+              background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
+              color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
+            }}>Remove</button>
+          </div>
+        ))}
+        {(form._newBannerPreviews || []).map((preview, idx) => (
+          <div key={`new-${idx}`} style={{ position: 'relative' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt={`New banner ${idx + 1}`} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--accent)', maxHeight: 160, objectFit: 'cover' }} />
+            <button onClick={() => removeNewBanner(idx)} style={{
+              position: 'absolute', top: 8, right: 8,
+              background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
+              color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
+            }}>Remove</button>
+            <span style={{ position: 'absolute', top: 8, left: 8, background: 'var(--accent)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>New</span>
+          </div>
+        ))}
+        <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}
+          style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
+          + Add image
+        </button>
       </EditCard>
 
       <div style={{ display: 'flex', gap: 10 }}>

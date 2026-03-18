@@ -129,8 +129,8 @@ const INITIAL = {
   endTime: '',
   numArenas: null,   // how many of the facility's arenas will be used
   participants: '',
-  bannerFile: null,
-  bannerPreview: null,
+  bannerFiles: [],
+  bannerPreviews: [],
   notes: '',
 
   // Step 2
@@ -165,19 +165,21 @@ export default function CreateTournamentPage() {
     setSlowUpload(false);
     const slowTimer = setTimeout(() => setSlowUpload(true), 5000);
 
-    // Upload banner to Supabase Storage if present (original quality)
+    // Upload banners to Supabase Storage (original quality)
     let bannerUrl = null;
-    if (form.bannerFile) {
-      const ext = form.bannerFile.name.split('.').pop();
+    const bannerUrls = [];
+    for (const file of form.bannerFiles) {
+      const ext = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('tournament-banners')
-        .upload(fileName, form.bannerFile, { cacheControl: '3600', upsert: false });
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from('tournament-banners').getPublicUrl(fileName);
-        bannerUrl = urlData.publicUrl;
+        bannerUrls.push(urlData.publicUrl);
       }
     }
+    if (bannerUrls.length > 0) bannerUrl = bannerUrls[0];
 
     const allFacilityArenas = FACILITY_ARENAS[form.facilityId] || [];
     const arenas = form.numArenas ? allFacilityArenas.slice(0, form.numArenas) : allFacilityArenas;
@@ -201,6 +203,7 @@ export default function CreateTournamentPage() {
         add_var: form.addVAR,
         status: 'upcoming',
         banner_url: bannerUrl,
+        banner_urls: bannerUrls,
       })
       .select()
       .single();
@@ -274,7 +277,7 @@ export default function CreateTournamentPage() {
 
       {/* Step content */}
       <div className="slide-up" key={step} style={{ marginTop: 20 }}>
-        {step === 0 && <StepBasics form={form} set={set} />}
+        {step === 0 && <StepBasics form={form} set={set} setForm={setForm} />}
         {step === 1 && <StepDeliverables form={form} set={set} />}
         {step === 2 && <StepSchedule form={form} set={set} />}
         {step === 3 && <StepReview form={form} />}
@@ -537,16 +540,31 @@ function StepBar({ step }) {
 
 // ─── Step 1: Basics ───────────────────────────────────────────────────────────
 
-function StepBasics({ form, set }) {
+function StepBasics({ form, set, setForm }) {
   const fileRef = useRef(null);
 
-  const handleBanner = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    set('bannerFile', file);
-    const reader = new FileReader();
-    reader.onload = ev => set('bannerPreview', ev.target.result);
-    reader.readAsDataURL(file);
+  const handleBanner = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const previews = await Promise.all(files.map(file => new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(file);
+    })));
+    setForm(f => ({
+      ...f,
+      bannerFiles: [...f.bannerFiles, ...files],
+      bannerPreviews: [...f.bannerPreviews, ...previews],
+    }));
+    e.target.value = '';
+  };
+
+  const removeBanner = (idx) => {
+    setForm(f => ({
+      ...f,
+      bannerFiles: f.bannerFiles.filter((_, i) => i !== idx),
+      bannerPreviews: f.bannerPreviews.filter((_, i) => i !== idx),
+    }));
   };
 
   const endDateError = form.startDate && form.endDate && form.endDate < form.startDate
@@ -646,20 +664,26 @@ function StepBasics({ form, set }) {
       </Section>
 
       <Section title="Tournament Banner">
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBanner} />
-        {form.bannerPreview ? (
-          <div style={{ position: 'relative' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={form.bannerPreview} alt="Banner preview" style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', maxHeight: 180, objectFit: 'cover' }} />
-            <button
-              onClick={() => { set('bannerFile', null); set('bannerPreview', null); }}
-              style={{
-                position: 'absolute', top: 8, right: 8,
-                background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
-                color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
-              }}
-            >
-              Remove
+        <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/*" multiple style={{ display: 'none' }} onChange={handleBanner} />
+        {form.bannerPreviews.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {form.bannerPreviews.map((preview, idx) => (
+              <div key={idx} style={{ position: 'relative' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={preview} alt={`Banner ${idx + 1}`} style={{ width: '100%', borderRadius: 12, border: '1px solid var(--border)', maxHeight: 180, objectFit: 'cover' }} />
+                <button
+                  onClick={() => removeBanner(idx)}
+                  style={{
+                    position: 'absolute', top: 8, right: 8,
+                    background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
+                    color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
+                  }}
+                >Remove</button>
+              </div>
+            ))}
+            <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}
+              style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
+              + Add another image
             </button>
           </div>
         ) : (
@@ -944,10 +968,12 @@ function StepReview({ form }) {
       )}
 
       {/* Banner preview */}
-      {form.bannerPreview && (
-        <ReviewSection title="Banner">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={form.bannerPreview} alt="Banner" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', maxHeight: 160, objectFit: 'cover' }} />
+      {form.bannerPreviews.length > 0 && (
+        <ReviewSection title={`Banner${form.bannerPreviews.length > 1 ? 's' : ''} (${form.bannerPreviews.length})`}>
+          {form.bannerPreviews.map((preview, idx) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={idx} src={preview} alt={`Banner ${idx + 1}`} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', maxHeight: 160, objectFit: 'cover' }} />
+          ))}
         </ReviewSection>
       )}
 
