@@ -233,6 +233,7 @@ export default function CreateTournamentPage() {
     setSubmitted(true);
   };
 
+  if (submitting) return <SubmittingScreen slowUpload={slowUpload} />;
   if (submitted) return <SuccessScreen form={form} onBack={() => { setForm(INITIAL); setStep(0); setSubmitted(false); setCreatedTournament(null); }} />;
 
   return (
@@ -307,25 +308,12 @@ export default function CreateTournamentPage() {
                 {submitError}
               </div>
             )}
-            {slowUpload && (
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, textAlign: 'center', width: '100%' }}>
-                Uploading your high quality banner — this may take a moment. Please don't close the page.
-              </div>
-            )}
-            <button className="btn-primary" onClick={handleSubmit} disabled={submitting}
+            <button className="btn-primary" onClick={handleSubmit}
               style={{ flex: 1, height: 44, justifyContent: 'center' }}>
-              {submitting ? (
-                <>
-                  <Spinner /> Submitting…
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Submit Tournament
-                </>
-              )}
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Submit Tournament
             </button>
           </>
         )}
@@ -964,6 +952,35 @@ function Spinner() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
     </svg>
+  );
+}
+
+function SubmittingScreen({ slowUpload }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: 20, padding: 32, zIndex: 100,
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-dark.png" alt="HiFy" style={{ height: 28, width: 'auto', marginBottom: 12, opacity: 0.5 }} />
+      <Spinner style={{ width: 40, height: 40 }} />
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+          Submitting your request…
+        </div>
+        <div style={{
+          fontSize: 13, color: 'var(--muted)',
+          maxWidth: 260,
+          opacity: slowUpload ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+        }}>
+          Uploading your banner — may take a moment. Please keep this page open.
+        </div>
+      </div>
+    </div>
   );
 }
 

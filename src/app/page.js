@@ -143,13 +143,13 @@ function SiteHeader() {
   return (
     <header style={{
       display: 'flex', alignItems: 'center',
-      padding: '0 24px', height: 72,
+      padding: '0 24px', height: 96,
       borderBottom: '1px solid var(--border)',
       background: 'var(--bg)',
       position: 'sticky', top: 0, zIndex: 50,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-dark.png" alt="HiFy" style={{ height: 56, width: 'auto' }} />
+      <img src="/logo-dark.png" alt="HiFy" style={{ height: 80, width: 'auto' }} />
     </header>
   );
 }
