@@ -1,0 +1,313 @@
+@import "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap";
+
+:root {
+  --bg: #1c1f26;
+  --surface: #252930;
+  --surface2: #2e333c;
+  --border: #ffffff14;
+  --text: #e6eaf2;
+  --muted: #828ca4;
+  --accent: #ff6b35;
+  --accent-start: #ffd000;
+  --accent-end: #ff3d6e;
+  --accent-grad: linear-gradient(135deg, #ffd000, #ff6b35, #ff3d6e);
+  --pink: #ff6b35;
+  --pink2: #ff8c5a;
+  --lime: #cfff04;
+  --lime2: #d4ff00;
+  --green: #12b76a;
+  --green2: #32d583;
+  --red: #ff6b8a;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+/* Inputs */
+.input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #ff6b3533;
+}
+
+.input option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--accent-grad);
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  transition: opacity 0.15s, transform 0.1s;
+  padding: 10px 20px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  transition: color 0.15s, border-color 0.15s;
+  padding: 10px 20px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ghost:hover { color: var(--text); border-color: #fff3; }
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-icon:hover { color: var(--text); border-color: #fff3; }
+
+/* Badges */
+.badge {
+  white-space: nowrap;
+  border-radius: 100px;
+  align-items: center;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.badge-green { color: var(--green2); background: #12b76a2e; }
+.badge-lime { color: var(--lime2); background: #cfff0426; }
+.badge-pink { color: var(--pink2); background: #ff6b352e; }
+.badge-red { color: var(--red); background: #ff3d6e38; }
+.badge-gray { background: var(--surface2); color: var(--muted); }
+.badge-amber { color: #fdb022; background: #fdb0222e; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up { animation: 0.22s forwards slideUp; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in { animation: 0.18s forwards fadeIn; }
+
+/* Form label */
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+}
+
+/* Step indicator dot */
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.step-dot.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #ff6b3533;
+}
+
+.step-dot.done {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+/* Option card (for package selection) */
+.option-card {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.option-card:hover {
+  border-color: rgba(255, 107, 53, 0.4);
+}
+
+.option-card.selected {
+  border-color: var(--accent);
+  background: rgba(255, 107, 53, 0.08);
+}
+
+.option-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+
+.option-card.selected .option-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.option-radio-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  display: none;
+}
+
+.option-card.selected .option-radio-dot {
+  display: block;
+}
+
+/* Toggle switch */
+.toggle {
+  width: 42px;
+  height: 24px;
+  border-radius: 100px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle.on .toggle-thumb {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+/* Upload zone */
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.upload-zone:hover {
+  border-color: rgba(255, 107, 53, 0.5);
+  background: rgba(255, 107, 53, 0.04);
+}
