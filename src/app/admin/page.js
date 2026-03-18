@@ -37,7 +37,7 @@ function TimePicker({ value, onChange }) {
   };
   const { h12, ampm } = parse(value);
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
       <select
         className="input"
         style={{ flex: 1 }}
@@ -47,16 +47,22 @@ function TimePicker({ value, onChange }) {
         <option value="" disabled />
         {TIME_12H.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
-      <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: 'var(--surface2)',
+        border: '1px solid var(--border)',
+        borderRadius: 10, padding: 3, gap: 2, flexShrink: 0,
+      }}>
         {['AM', 'PM'].map(p => (
           <button key={p} type="button"
             onClick={() => onChange(build(h12 || '00:00', p))}
             style={{
-              padding: '0 10px', border: 'none', cursor: 'pointer',
-              fontSize: 12, fontWeight: 700,
-              background: ampm === p ? 'var(--accent)' : 'var(--surface2)',
+              padding: '5px 11px', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, borderRadius: 7, lineHeight: 1,
+              background: ampm === p ? 'var(--accent)' : 'transparent',
               color: ampm === p ? '#fff' : 'var(--muted)',
-              transition: 'background 0.15s',
+              boxShadow: ampm === p ? '0 1px 4px rgba(255,107,53,0.3)' : 'none',
+              transition: 'all 0.15s',
             }}
           >{p}</button>
         ))}
