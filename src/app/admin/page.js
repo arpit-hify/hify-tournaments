@@ -765,9 +765,28 @@ const splitGameTime = (iso) => {
 };
 const joinGameTime = (date, time) => (date && time) ? `${date}T${time}` : null;
 
+// For new-game form state (plain strings, no DB conversion needed)
+const splitDT = (dt) => ({ date: dt ? dt.slice(0, 10) : '', time: dt ? dt.slice(11, 16) : '' });
+const joinDT = (date, time) => (date && time) ? `${date}T${time}` : '';
+
 function EditPanel({ form, setForm, onSave, onCancel, saving }) {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
   const fileRef = useRef(null);
+  const [newGame, setNewGame] = useState({ arena: '', startTime: '', endTime: '', label: '' });
+
+  const matchTimeError = newGame.startTime && newGame.endTime && newGame.endTime <= newGame.startTime
+    ? 'End time must be after start time' : null;
+  const isDuplicate = !!(newGame.arena && newGame.startTime && newGame.endTime &&
+    (form.games || []).some(g => g.arena === newGame.arena && g.start_time === newGame.startTime && g.end_time === newGame.endTime));
+
+  const addNewGame = () => {
+    if (!newGame.arena || !newGame.startTime || !newGame.endTime || matchTimeError || isDuplicate) return;
+    setForm(f => ({
+      ...f,
+      games: [...(f.games || []), { arena: newGame.arena, label: newGame.label, start_time: newGame.startTime, end_time: newGame.endTime }],
+    }));
+    setNewGame(g => ({ ...g, arena: '', label: '' }));
+  };
 
   const handleBannerAdd = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -804,14 +823,6 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
     setForm(f => ({
       ...f,
       games: f.games.map((g, i) => i === idx ? { ...g, [key]: val } : g),
-    }));
-  };
-
-  const addGame = () => {
-    const arenas = FACILITY_ARENAS[form.facility_id] || [];
-    setForm(f => ({
-      ...f,
-      games: [...f.games, { arena: arenas[0] || '', label: '', start_time: null, end_time: null }],
     }));
   };
 
@@ -915,13 +926,60 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
 
       {/* Game Schedule */}
       <EditCard title={`Game Schedule (${(form.games || []).length} games)`}>
+        {/* Add game form — same pattern as create page */}
+        <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 12px 14px', background: 'var(--surface2)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Add Game</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div>
+              <label className="label">Arena *</label>
+              <select className="input" value={newGame.arena} onChange={e => setNewGame(g => ({ ...g, arena: e.target.value }))}>
+                <option value="" disabled />
+                {arenas.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Label (optional)</label>
+              <input className="input" value={newGame.label} onChange={e => setNewGame(g => ({ ...g, label: e.target.value }))} placeholder="QF1, Semi-Final A…" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+            <div>
+              <label className="label">Start Date *</label>
+              <DateInput value={splitDT(newGame.startTime).date} onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(v, splitDT(g.startTime).time) }))} />
+            </div>
+            <div>
+              <label className="label">Start Time *</label>
+              <TimePicker value={splitDT(newGame.startTime).time} onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(splitDT(g.startTime).date, v) }))} />
+            </div>
+            <div>
+              <label className="label">End Date *</label>
+              <DateInput value={splitDT(newGame.endTime).date} onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(v, splitDT(g.endTime).time) }))} />
+            </div>
+            <div>
+              <label className="label">End Time *</label>
+              <TimePicker value={splitDT(newGame.endTime).time} onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(splitDT(g.endTime).date, v) }))} error={!!matchTimeError} />
+              {matchTimeError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>{matchTimeError}</div>}
+            </div>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={addNewGame}
+            disabled={!newGame.arena || !newGame.startTime || !newGame.endTime || !!matchTimeError || isDuplicate}
+            style={{ width: '100%', justifyContent: 'center', height: 38, marginTop: 10 }}
+          >
+            + Add Game
+          </button>
+          {isDuplicate && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>A game for this arena already exists at the same time</div>}
+        </div>
+
+        {/* Existing games list */}
         {(form.games || []).map((g, idx) => {
           const st = splitGameTime(g.start_time);
           const et = splitGameTime(g.end_time);
           return (
             <div key={idx} style={{
               padding: '10px 12px', borderRadius: 10,
-              background: 'var(--surface2)', border: '1px solid var(--border)',
+              background: 'var(--surface)', border: '1px solid var(--border)',
               display: 'flex', flexDirection: 'column', gap: 8,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -964,10 +1022,6 @@ function EditPanel({ form, setForm, onSave, onCancel, saving }) {
             </div>
           );
         })}
-        <button type="button" className="btn-ghost" onClick={addGame}
-          style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
-          + Add Game
-        </button>
       </EditCard>
 
       {/* Banners */}
