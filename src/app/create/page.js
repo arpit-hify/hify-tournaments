@@ -121,7 +121,7 @@ export default function CreateTournamentPage() {
         end_date: form.endDate,
         end_time: form.endTime,
         num_arenas: arenas.length,
-        participants: form.participants ? parseInt(form.participants) : null,
+        participants: form.participants || null,
         notes: form.notes || null,
         package_id: form.packageId,
         add_livestream: form.addLivestream,
@@ -483,8 +483,8 @@ function StepBasics({ form, set }) {
         })()}
         <Field label="Expected Participants">
           <input
-            className="input" type="number" min={1}
-            placeholder="e.g. 64"
+            className="input"
+            placeholder="e.g. 64 or 100–150"
             value={form.participants}
             onChange={e => set('participants', e.target.value)}
           />
