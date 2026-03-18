@@ -5,26 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
 
-// Compress image to JPEG via canvas — max 1920px wide, quality 0.82
-function compressImage(file, maxWidth = 1920, quality = 0.82) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const scale = Math.min(1, maxWidth / img.width);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-    img.src = url;
-  });
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -182,14 +162,14 @@ export default function CreateTournamentPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    // Upload banner to Supabase Storage if present (compress first)
+    // Upload banner to Supabase Storage if present (original quality)
     let bannerUrl = null;
     if (form.bannerFile) {
-      const compressed = await compressImage(form.bannerFile);
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+      const ext = form.bannerFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('tournament-banners')
-        .upload(fileName, compressed, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+        .upload(fileName, form.bannerFile, { cacheControl: '3600', upsert: false });
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from('tournament-banners').getPublicUrl(fileName);
         bannerUrl = urlData.publicUrl;
@@ -610,7 +590,8 @@ function StepBasics({ form, set }) {
               <polyline points="21 15 16 10 5 21" />
             </svg>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload banner or logo</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>PNG, JPG up to 100MB</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>Upload the highest quality image available</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>This will be printed on large boards &amp; used as the app thumbnail</div>
           </div>
         )}
       </Section>
