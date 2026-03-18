@@ -366,9 +366,6 @@ function StepBasics({ form, set }) {
       </Section>
 
       <Section title="Tournament Banner">
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.5 }}>
-          HiFy creates the official banner with your logo, HiFy's logo, and any sponsor logos. Upload a reference image or your logo here.
-        </p>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBanner} />
         {form.bannerPreview ? (
           <div style={{ position: 'relative' }}>
@@ -410,9 +407,6 @@ function StepDeliverables({ form, set }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Highlights Package">
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.5 }}>
-          Photos are always included free of charge. Choose the highlights package for your participants.
-        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {PACKAGES.map(p => (
             <div
@@ -432,7 +426,6 @@ function StepDeliverables({ form, set }) {
                     padding: '2px 7px', whiteSpace: 'nowrap',
                   }}>{p.price}</span>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.4 }}>{p.description}</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
                   {p.deliverables.map(d => (
                     <span key={d} className="badge badge-gray" style={{ fontSize: 10 }}>{d}</span>
@@ -448,7 +441,7 @@ function StepDeliverables({ form, set }) {
         <AddOnRow
           icon={<LiveStreamIcon />}
           label="Livestream"
-          description="Live YouTube stream from each camera. Billed at ₹250/hr per camera."
+          description="Live YouTube stream from each camera."
           checked={form.addLivestream}
           onChange={() => set('addLivestream', !form.addLivestream)}
           badge="₹250/hr/camera"
@@ -458,7 +451,7 @@ function StepDeliverables({ form, set }) {
         <AddOnRow
           icon={<VARIcon />}
           label="VAR (Video Assistant Referee)"
-          description="Video review for disputed referee calls. A VAR operator will be stationed at the venue. Generally for semis & finals."
+          description="Video review for disputed calls. For semis & finals."
           checked={form.addVAR}
           onChange={() => set('addVAR', !form.addVAR)}
           badge="Pricing TBD"
@@ -484,9 +477,6 @@ function StepDeliverables({ form, set }) {
             value={`₹${(parseInt(pkg.price.replace(/[^\d]/g, '')) * perPlayer).toLocaleString('en-IN')}`}
             bold
           />
-          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-            Final pricing confirmed by HiFy after scope review. Players can request additional personalized reels directly on the app.
-          </p>
         </div>
       )}
     </div>
@@ -541,15 +531,6 @@ function StepSchedule({ form, set }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="card" style={{ padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(255,208,0,0.06)', borderColor: 'rgba(255,208,0,0.2)' }}>
-        <svg width="16" height="16" fill="none" stroke="#ffd000" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-          Schedule is <strong style={{ color: 'var(--text)' }}>optional</strong> — cameras record continuously across all arenas. Individual match identification can be added later using scoresheets.
-        </p>
-      </div>
-
       <Section title="Add Matches">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 10 }}>

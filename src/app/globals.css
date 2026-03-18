@@ -1,12 +1,12 @@
 @import "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap";
 
 :root {
-  --bg: #1c1f26;
-  --surface: #252930;
-  --surface2: #2e333c;
-  --border: #ffffff14;
-  --text: #e6eaf2;
-  --muted: #828ca4;
+  --bg: #ffffff;
+  --surface: #f8f9fa;
+  --surface2: #eef0f3;
+  --border: #e2e5ec;
+  --text: #111827;
+  --muted: #6b7280;
   --accent: #ff6b35;
   --accent-start: #ffd000;
   --accent-end: #ff3d6e;
@@ -112,7 +112,7 @@ textarea.input {
   gap: 6px;
 }
 
-.btn-ghost:hover { color: var(--text); border-color: #fff3; }
+.btn-ghost:hover { color: var(--text); border-color: #c0c4cc; }
 
 .btn-icon {
   width: 36px;
@@ -129,7 +129,7 @@ textarea.input {
   flex-shrink: 0;
 }
 
-.btn-icon:hover { color: var(--text); border-color: #fff3; }
+.btn-icon:hover { color: var(--text); border-color: #c0c4cc; }
 
 /* Badges */
 .badge {
