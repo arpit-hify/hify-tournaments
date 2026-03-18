@@ -781,6 +781,15 @@ function toDatetimeLocal(date, time) {
 const splitDT = (dt) => ({ date: dt ? dt.slice(0, 10) : '', time: dt ? dt.slice(11, 16) : '' });
 const joinDT = (date, time) => (date && time) ? `${date}T${time}` : '';
 
+function fmt12(t) {
+  if (!t) return '';
+  const [hStr, mStr] = t.split(':');
+  const h = parseInt(hStr, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr} ${ampm}`;
+}
+
 function StepSchedule({ form, set }) {
   const allArenas = FACILITY_ARENAS[form.facilityId] || [];
   const arenaOptions = allArenas;
@@ -815,8 +824,26 @@ function StepSchedule({ form, set }) {
 
   const removeGame = (id) => set('games', form.games.filter(g => g.id !== id));
 
+  const dateRange = form.startDate
+    ? (form.startDate === form.endDate
+        ? fmtDateDisplay(form.startDate)
+        : `${fmtDateDisplay(form.startDate)} → ${fmtDateDisplay(form.endDate)}`)
+    : '—';
+  const timeRange = form.startTime ? `${fmt12(form.startTime)} – ${fmt12(form.endTime)}` : '—';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{
+        background: 'var(--surface2)', border: '1px solid var(--border)',
+        borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>{form.name || '—'}</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 13, color: 'var(--muted)' }}>
+          <span>{allArenas.length} arena{allArenas.length !== 1 ? 's' : ''}</span>
+          <span>{dateRange}</span>
+          <span>{timeRange}</span>
+        </div>
+      </div>
       <Section title="Add Game">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
