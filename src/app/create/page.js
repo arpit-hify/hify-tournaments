@@ -236,7 +236,7 @@ export default function CreateTournamentPage() {
           </svg>
         </button>
         <div>
-          <h1 className="font-display" style={{ fontSize: 18, fontWeight: 700 }}>New Tournament</h1>
+          <h1 className="font-display" style={{ fontSize: 18, fontWeight: 700 }}>Tournament Request</h1>
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
             Step {step + 1} of {STEPS.length} · {STEPS[step].label}
           </p>
