@@ -791,7 +791,7 @@ function fmt12(t) {
 }
 
 function StepSchedule({ form, set }) {
-  const allArenas = (FACILITY_ARENAS[form.facilityId] || []).slice(0, form.numArenas || undefined);
+  const allArenas = FACILITY_ARENAS[form.facilityId] || [];
   const arenaOptions = allArenas;
   const [newGame, setNewGame] = useState({
     arena: '',
@@ -839,7 +839,7 @@ function StepSchedule({ form, set }) {
       }}>
         <span style={{ fontWeight: 600, fontSize: 14 }}>{form.name || '—'}</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 13, color: 'var(--muted)' }}>
-          <span>{allArenas.length} arena{allArenas.length !== 1 ? 's' : ''}</span>
+          <span>{form.numArenas ?? allArenas.length} arena{(form.numArenas ?? allArenas.length) !== 1 ? 's' : ''}</span>
           <span>{dateRange}</span>
           <span>{timeRange}</span>
         </div>
