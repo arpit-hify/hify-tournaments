@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import JSZip from 'jszip';
 import { supabase, PACKAGES } from '@/lib/supabase';
 import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
@@ -139,6 +140,7 @@ function formatTime(timeStr) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
+  const router = useRouter();
   const [locked, setLocked] = useState(true);
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
@@ -149,9 +151,6 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState(null);
-  const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
 
@@ -222,7 +221,6 @@ export default function AdminPage() {
   }
 
   async function selectTournament(t) {
-    setEditing(false);
     setLoadingDetail(true);
     setSelected({ ...t, games: [] });
     const { data: games } = await supabase
@@ -235,96 +233,7 @@ export default function AdminPage() {
   }
 
   function startEdit() {
-    setEditForm({
-      ...selected,
-      games: selected.games ?? [],
-      _newBannerFiles: [],
-      _newBannerPreviews: [],
-    });
-    setEditing(true);
-  }
-
-  function cancelEdit() {
-    setEditing(false);
-    setEditForm(null);
-  }
-
-  async function saveEdit() {
-    if (!editForm) return;
-    setSaving(true);
-
-    // Upload any new banner files
-    const newUrls = [];
-    for (const file of (editForm._newBannerFiles || [])) {
-      const ext = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('tournament-banners')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('tournament-banners').getPublicUrl(fileName);
-        newUrls.push(urlData.publicUrl);
-      }
-    }
-    const existingUrls = editForm.banner_urls?.length
-      ? editForm.banner_urls
-      : (editForm.banner_url ? [editForm.banner_url] : []);
-    const allUrls = [...existingUrls, ...newUrls];
-
-    const { error } = await supabase
-      .from('tournaments')
-      .update({
-        name: editForm.name,
-        sport: editForm.sport,
-        facility_id: editForm.facility_id,
-        facility_name: FACILITIES.find(f => f.id === editForm.facility_id)?.name ?? editForm.facility_name,
-        start_date: editForm.start_date,
-        start_time: editForm.start_time,
-        end_date: editForm.end_date,
-        end_time: editForm.end_time,
-        num_arenas: editForm.num_arenas,
-        participants: editForm.participants ? parseInt(editForm.participants) : null,
-        notes: editForm.notes || null,
-        package_id: editForm.package_id,
-        add_livestream: editForm.add_livestream,
-        add_var: editForm.add_var,
-        status: editForm.status,
-        join_link: editForm.join_link,
-        banner_url: allUrls[0] || null,
-        banner_urls: allUrls,
-      })
-      .eq('id', editForm.id);
-
-    if (!error) {
-      // Save games: delete all existing, re-insert
-      await supabase.from('games').delete().eq('tournament_id', editForm.id);
-      if ((editForm.games || []).length > 0) {
-        await supabase.from('games').insert(
-          editForm.games.map(g => ({
-            tournament_id: editForm.id,
-            arena: g.arena,
-            label: g.label || null,
-            start_time: g.start_time || null,
-            end_time: g.end_time || null,
-          }))
-        );
-      }
-
-      const updatedGames = editForm.games || [];
-      const updated = {
-        ...selected,
-        ...editForm,
-        games: updatedGames,
-        banner_url: allUrls[0] || null,
-        banner_urls: allUrls,
-        facility_name: FACILITIES.find(f => f.id === editForm.facility_id)?.name ?? editForm.facility_name,
-      };
-      setSelected(updated);
-      setTournaments(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
-      setEditing(false);
-      setEditForm(null);
-    }
-    setSaving(false);
+    if (selected) router.push(`/admin/edit/${selected.id}`);
   }
 
   async function changeStatus(newStatus) {
@@ -508,14 +417,6 @@ export default function AdminPage() {
           <div style={{ padding: 24 }}>
             {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 12, marginBottom: 12 }} />)}
           </div>
-        ) : editing ? (
-          <EditPanel
-            form={editForm}
-            setForm={setEditForm}
-            onSave={saveEdit}
-            onCancel={cancelEdit}
-            saving={saving}
-          />
         ) : (
           <DetailPanel
             tournament={selected}
@@ -750,329 +651,6 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
     </div>
   );
 }
-
-// ─── Edit Panel ───────────────────────────────────────────────────────────────
-
-const splitGameTime = (iso) => {
-  if (!iso) return { date: '', time: '' };
-  const d = new Date(iso);
-  // Use UTC values — game times are stored as plain "YYYY-MM-DDTHH:mm"
-  // without timezone so Postgres treats them as UTC; read them back as-is
-  const date = d.toISOString().slice(0, 10);
-  const h = String(d.getUTCHours()).padStart(2, '0');
-  const m = String(d.getUTCMinutes()).padStart(2, '0');
-  return { date, time: `${h}:${m}` };
-};
-const joinGameTime = (date, time) => (date && time) ? `${date}T${time}` : null;
-
-// For new-game form state (plain strings, no DB conversion needed)
-const splitDT = (dt) => ({ date: dt ? dt.slice(0, 10) : '', time: dt ? dt.slice(11, 16) : '' });
-const joinDT = (date, time) => (date && time) ? `${date}T${time}` : '';
-
-function EditPanel({ form, setForm, onSave, onCancel, saving }) {
-  const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
-  const fileRef = useRef(null);
-  const [newGame, setNewGame] = useState({ arena: '', startTime: '', endTime: '', label: '' });
-
-  const matchTimeError = newGame.startTime && newGame.endTime && newGame.endTime <= newGame.startTime
-    ? 'End time must be after start time' : null;
-  const isDuplicate = !!(newGame.arena && newGame.startTime && newGame.endTime &&
-    (form.games || []).some(g => g.arena === newGame.arena && g.start_time === newGame.startTime && g.end_time === newGame.endTime));
-
-  const addNewGame = () => {
-    if (!newGame.arena || !newGame.startTime || !newGame.endTime || matchTimeError || isDuplicate) return;
-    setForm(f => ({
-      ...f,
-      games: [...(f.games || []), { arena: newGame.arena, label: newGame.label, start_time: newGame.startTime, end_time: newGame.endTime }],
-    }));
-    setNewGame(g => ({ ...g, arena: '', label: '' }));
-  };
-
-  const handleBannerAdd = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const previews = await Promise.all(files.map(file => new Promise(res => {
-      const reader = new FileReader();
-      reader.onload = ev => res(ev.target.result);
-      reader.readAsDataURL(file);
-    })));
-    setForm(f => ({
-      ...f,
-      _newBannerFiles: [...(f._newBannerFiles || []), ...files],
-      _newBannerPreviews: [...(f._newBannerPreviews || []), ...previews],
-    }));
-    e.target.value = '';
-  };
-
-  const removeExistingBanner = (idx) => {
-    setForm(f => ({
-      ...f,
-      banner_urls: (f.banner_urls || []).filter((_, i) => i !== idx),
-    }));
-  };
-
-  const removeNewBanner = (idx) => {
-    setForm(f => ({
-      ...f,
-      _newBannerFiles: (f._newBannerFiles || []).filter((_, i) => i !== idx),
-      _newBannerPreviews: (f._newBannerPreviews || []).filter((_, i) => i !== idx),
-    }));
-  };
-
-  const setGame = (idx, key, val) => {
-    setForm(f => ({
-      ...f,
-      games: f.games.map((g, i) => i === idx ? { ...g, [key]: val } : g),
-    }));
-  };
-
-  const removeGame = (idx) => {
-    setForm(f => ({ ...f, games: f.games.filter((_, i) => i !== idx) }));
-  };
-
-  const existingBannerUrls = form.banner_urls?.length
-    ? form.banner_urls
-    : (form.banner_url ? [form.banner_url] : []);
-  const arenas = FACILITY_ARENAS[form.facility_id] || [];
-
-  return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '24px 24px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <button className="btn-icon" onClick={onCancel}>
-          <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div>
-          <h2 className="font-display" style={{ fontSize: 17, fontWeight: 700 }}>Edit Tournament</h2>
-          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>Changes save directly to the database</p>
-        </div>
-      </div>
-
-      <EditCard title="Tournament Details">
-        <EditField label="Tournament Name">
-          <input className="input" value={form.name} onChange={e => set('name', e.target.value)} />
-        </EditField>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <EditField label="Sport">
-            <select className="input" value={form.sport} onChange={e => set('sport', e.target.value)}>
-              {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </EditField>
-          <EditField label="Facility">
-            <select className="input" value={form.facility_id} onChange={e => set('facility_id', e.target.value)}>
-              {FACILITIES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </EditField>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <EditField label="Start Date">
-            <DateInput value={form.start_date ?? ''} onChange={v => set('start_date', v)} />
-          </EditField>
-          <EditField label="Start Time">
-            <TimePicker value={form.start_time ?? ''} onChange={v => set('start_time', v)} />
-          </EditField>
-          <EditField label="End Date">
-            <DateInput value={form.end_date ?? ''} onChange={v => set('end_date', v)} />
-          </EditField>
-          <EditField label="End Time">
-            <TimePicker value={form.end_time ?? ''} onChange={v => set('end_time', v)} />
-          </EditField>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <EditField label="Arenas">
-            <input className="input" type="number" min={1} max={20} value={form.num_arenas} onChange={e => set('num_arenas', parseInt(e.target.value) || 1)} />
-          </EditField>
-          <EditField label="Participants">
-            <input className="input" type="number" min={1} value={form.participants ?? ''} onChange={e => set('participants', e.target.value)} />
-          </EditField>
-        </div>
-        <EditField label="Notes">
-          <textarea className="input" value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} style={{ minHeight: 70 }} />
-        </EditField>
-        <EditField label="Join Link">
-          <input className="input" value={form.join_link ?? ''} onChange={e => set('join_link', e.target.value)} />
-        </EditField>
-      </EditCard>
-
-      <EditCard title="Deliverables">
-        <EditField label="Package">
-          <select className="input" value={form.package_id} onChange={e => set('package_id', e.target.value)}>
-            {PACKAGES_LIST.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-        </EditField>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-            <div className={`toggle ${form.add_livestream ? 'on' : ''}`} onClick={() => set('add_livestream', !form.add_livestream)}>
-              <div className="toggle-thumb" />
-            </div>
-            Livestream
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-            <div className={`toggle ${form.add_var ? 'on' : ''}`} onClick={() => set('add_var', !form.add_var)}>
-              <div className="toggle-thumb" />
-            </div>
-            VAR
-          </label>
-        </div>
-        <EditField label="Status">
-          <select className="input" value={form.status} onChange={e => set('status', e.target.value)}>
-            <option value="upcoming">Upcoming</option>
-            <option value="live">Live</option>
-            <option value="completed">Completed</option>
-          </select>
-        </EditField>
-      </EditCard>
-
-      {/* Game Schedule */}
-      <EditCard title={`Game Schedule (${(form.games || []).length} games)`}>
-        {/* Add game form — same pattern as create page */}
-        <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 12px 14px', background: 'var(--surface2)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Add Game</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <div>
-              <label className="label">Arena *</label>
-              <select className="input" value={newGame.arena} onChange={e => setNewGame(g => ({ ...g, arena: e.target.value }))}>
-                <option value="" disabled />
-                {arenas.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Label (optional)</label>
-              <input className="input" value={newGame.label} onChange={e => setNewGame(g => ({ ...g, label: e.target.value }))} placeholder="QF1, Semi-Final A…" />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-            <div>
-              <label className="label">Start Date *</label>
-              <DateInput value={splitDT(newGame.startTime).date} onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(v, splitDT(g.startTime).time) }))} />
-            </div>
-            <div>
-              <label className="label">Start Time *</label>
-              <TimePicker value={splitDT(newGame.startTime).time} onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(splitDT(g.startTime).date, v) }))} />
-            </div>
-            <div>
-              <label className="label">End Date *</label>
-              <DateInput value={splitDT(newGame.endTime).date} onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(v, splitDT(g.endTime).time) }))} />
-            </div>
-            <div>
-              <label className="label">End Time *</label>
-              <TimePicker value={splitDT(newGame.endTime).time} onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(splitDT(g.endTime).date, v) }))} error={!!matchTimeError} />
-              {matchTimeError && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>{matchTimeError}</div>}
-            </div>
-          </div>
-          <button
-            className="btn-primary"
-            onClick={addNewGame}
-            disabled={!newGame.arena || !newGame.startTime || !newGame.endTime || !!matchTimeError || isDuplicate}
-            style={{ width: '100%', justifyContent: 'center', height: 38, marginTop: 10 }}
-          >
-            + Add Game
-          </button>
-          {isDuplicate && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 4 }}>A game for this arena already exists at the same time</div>}
-        </div>
-
-        {/* Existing games list */}
-        {(form.games || []).map((g, idx) => {
-          const st = splitGameTime(g.start_time);
-          const et = splitGameTime(g.end_time);
-          return (
-            <div key={idx} style={{
-              padding: '10px 12px', borderRadius: 10,
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>Game {idx + 1}</span>
-                <button type="button" onClick={() => removeGame(idx)} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: 11, fontWeight: 600,
-                }}>Remove</button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <label className="label">Arena</label>
-                  <select className="input" value={g.arena} onChange={e => setGame(idx, 'arena', e.target.value)}>
-                    {arenas.map(a => <option key={a} value={a}>{a}</option>)}
-                    {!arenas.includes(g.arena) && g.arena && <option value={g.arena}>{g.arena}</option>}
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Label (optional)</label>
-                  <input className="input" value={g.label || ''} onChange={e => setGame(idx, 'label', e.target.value)} placeholder="e.g. Semi Final" />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <label className="label">Start Date</label>
-                  <DateInput value={st.date} onChange={v => setGame(idx, 'start_time', joinGameTime(v, st.time))} />
-                </div>
-                <div>
-                  <label className="label">Start Time</label>
-                  <TimePicker value={st.time} onChange={v => setGame(idx, 'start_time', joinGameTime(st.date, v))} />
-                </div>
-                <div>
-                  <label className="label">End Date</label>
-                  <DateInput value={et.date} onChange={v => setGame(idx, 'end_time', joinGameTime(v, et.time))} />
-                </div>
-                <div>
-                  <label className="label">End Time</label>
-                  <TimePicker value={et.time} onChange={v => setGame(idx, 'end_time', joinGameTime(et.date, v))} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </EditCard>
-
-      {/* Banners */}
-      <EditCard title={`Banners (${existingBannerUrls.length + (form._newBannerPreviews?.length || 0)})`}>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/*" multiple style={{ display: 'none' }} onChange={handleBannerAdd} />
-        {existingBannerUrls.map((url, idx) => (
-          <div key={idx} style={{ position: 'relative' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`Banner ${idx + 1}`} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', maxHeight: 160, objectFit: 'cover' }} />
-            <button onClick={() => removeExistingBanner(idx)} style={{
-              position: 'absolute', top: 8, right: 8,
-              background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
-              color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
-            }}>Remove</button>
-          </div>
-        ))}
-        {(form._newBannerPreviews || []).map((preview, idx) => (
-          <div key={`new-${idx}`} style={{ position: 'relative' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt={`New banner ${idx + 1}`} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--accent)', maxHeight: 160, objectFit: 'cover' }} />
-            <button onClick={() => removeNewBanner(idx)} style={{
-              position: 'absolute', top: 8, right: 8,
-              background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 8,
-              color: '#fff', padding: '4px 8px', fontSize: 11, cursor: 'pointer',
-            }}>Remove</button>
-            <span style={{ position: 'absolute', top: 8, left: 8, background: 'var(--accent)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>New</span>
-          </div>
-        ))}
-        <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}
-          style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
-          + Add image
-        </button>
-      </EditCard>
-
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, justifyContent: 'center' }}>
-          Cancel
-        </button>
-        <button className="btn-primary" onClick={onSave} disabled={saving} style={{ flex: 1, height: 44, justifyContent: 'center' }}>
-          {saving ? <><Spinner /> Saving…</> : <>
-            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Save Changes
-          </>}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function DetailCard({ title, children }) {
@@ -1098,27 +676,6 @@ function DetailRow({ label, value, accent }) {
   );
 }
 
-function EditCard({ title, children }) {
-  return (
-    <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
-        {title}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function EditField({ label, children }) {
-  return (
-    <div>
-      <label className="label">{label}</label>
-      {children}
-    </div>
-  );
-}
 
 function Spinner() {
   return (
