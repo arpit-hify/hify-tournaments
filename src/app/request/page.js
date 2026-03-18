@@ -269,7 +269,6 @@ export default function CreateTournamentPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-dark.png" alt="HiFy" style={{ height: 32, width: 'auto' }} />
         </a>
-        <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 4 }}>Request Tournament</span>
       </header>
 
       {/* Step progress */}
