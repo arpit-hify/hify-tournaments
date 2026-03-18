@@ -271,17 +271,18 @@ export default function AdminPage() {
     setSelected(verified);
     setTournaments(prev => prev.map(t => t.id === verified.id ? { ...t, verified: true } : t));
 
-    // Build JSON
+    // Build JSON — all datetimes as UTC ISO strings
+    const toUTC = (date, time) =>
+      date && time ? new Date(`${date}T${time}`).toISOString() : null;
+
     const exportData = {
       id: verified.id,
       name: verified.name,
       sport: verified.sport,
       facility_name: verified.facility_name,
       facility_id: verified.facility_id,
-      start_date: verified.start_date,
-      start_time: verified.start_time,
-      end_date: verified.end_date,
-      end_time: verified.end_time,
+      start_datetime: toUTC(verified.start_date, verified.start_time),
+      end_datetime: toUTC(verified.end_date, verified.end_time),
       num_arenas: verified.num_arenas,
       participants: verified.participants,
       package_id: verified.package_id,
@@ -293,12 +294,12 @@ export default function AdminPage() {
       banner_url: verified.banner_url,
       status: verified.status,
       verified: true,
-      created_at: verified.created_at,
+      created_at: new Date(verified.created_at).toISOString(),
       games: (verified.games ?? []).map(g => ({
         arena: g.arena,
         label: g.label,
-        start_time: g.start_time,
-        end_time: g.end_time,
+        start_time: g.start_time ? new Date(g.start_time).toISOString() : null,
+        end_time: g.end_time ? new Date(g.end_time).toISOString() : null,
       })),
     };
 
