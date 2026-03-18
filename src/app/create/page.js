@@ -428,7 +428,7 @@ function StepBasics({ form, set }) {
             <FacilityAutocomplete
               facilityId={form.facilityId}
               facilityName={form.facilityName}
-              onChange={(id, name) => { set('facilityId', id); set('facilityName', name); }}
+              onChange={(id, name) => { set('facilityId', id); set('facilityName', name); set('numArenas', null); }}
             />
           </Field>
         </div>
