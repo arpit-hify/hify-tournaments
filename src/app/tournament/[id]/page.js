@@ -95,8 +95,10 @@ export default function TournamentDetailPage() {
         background: 'var(--bg)',
         position: 'sticky', top: 0, zIndex: 50,
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+        </a>
       </header>
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px' }}>
       {/* Header */}

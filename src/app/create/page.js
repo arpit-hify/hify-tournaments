@@ -263,8 +263,10 @@ export default function CreateTournamentPage() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
+        </a>
       </header>
 
       {/* Step progress */}
