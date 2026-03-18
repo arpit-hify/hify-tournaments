@@ -2,39 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase, PACKAGES } from '@/lib/supabase';
+import { FACILITIES } from '@/lib/facilities';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ADMIN_PASSWORD = 'hify2026';
 
 const SPORTS = ['Pickleball', 'Padel', 'Football', 'Cricket', 'Badminton'];
-
-const FACILITIES = [
-  { id: 1,   name: 'Urbansports Shaktimills',       city: 'Mumbai' },
-  { id: 5,   name: 'Score Indoor Pickleball',        city: 'Mumbai' },
-  { id: 6,   name: 'Score Marwah - Sakinaka',        city: 'Mumbai' },
-  { id: 7,   name: 'Torba Pali Hill',                city: 'Mumbai' },
-  { id: 8,   name: 'Padel Project - Powai',          city: 'Mumbai' },
-  { id: 9,   name: 'The CourtRoom',                  city: 'Mumbai' },
-  { id: 10,  name: 'Shuttle Whizz Badminton',        city: 'Mumbai' },
-  { id: 12,  name: 'LvL One Pickleball',             city: 'Mumbai' },
-  { id: 13,  name: 'ACE PADEL',                      city: 'Mumbai' },
-  { id: 43,  name: 'Serve Society',                  city: 'Mumbai' },
-  { id: 44,  name: 'KickForAll',                     city: 'Mumbai' },
-  { id: 76,  name: 'Hurdles Ghatkopar',              city: 'Mumbai' },
-  { id: 109, name: 'Common grounds Thane',           city: 'Thane' },
-  { id: 142, name: 'Epic Play',                      city: 'Mumbai' },
-  { id: 175, name: 'Hurdles Chembur',                city: 'Mumbai' },
-  { id: 208, name: 'Arena X - Pickleball Court',     city: 'Pune' },
-  { id: 209, name: 'The Pickle Point',               city: 'Pune' },
-  { id: 210, name: 'GoRally Pickleball Sarjapur',    city: 'Bengaluru' },
-  { id: 211, name: 'GoRally Pickleball Jayamahal',   city: 'Bengaluru' },
-  { id: 241, name: 'Pickleball Arena',               city: 'Mumbai' },
-  { id: 274, name: 'Iron Pickleball',                city: 'Mumbai' },
-  { id: 307, name: 'Courtside',                      city: 'Mumbai' },
-  { id: 340, name: 'Padelverse Ranibaug',            city: 'Mumbai' },
-  { id: 373, name: '11 Point Club',                  city: 'Bengaluru' },
-];
 
 const PACKAGES_LIST = [
   { id: 'full', label: 'Personalized Reels + Shorts – All Players' },

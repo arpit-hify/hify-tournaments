@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { FACILITIES, FACILITY_ARENAS } from '@/lib/facilities';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -13,28 +14,24 @@ const PACKAGES = [
     id: 'full',
     label: 'Personalized Reels + Shorts – All Players',
     description: 'Every registered player gets personalized reel & short highlights.',
-    price: '₹200 / player',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
   },
   {
     id: 'semis',
     label: 'Personalized Reels + Shorts – Semis & Finals',
     description: 'Personalized content for semifinal and final stage players only.',
-    price: '₹150 / player',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
   },
   {
     id: 'shorts_all',
     label: 'Personalized Shorts – All Players',
     description: 'Short-form highlights for all players plus general event shorts.',
-    price: '₹150 / player',
     deliverables: ['Personalized Shorts', 'General Shorts', 'Photos'],
   },
   {
     id: 'general',
     label: 'General Shorts – All Players',
     description: 'Event-level short clips for the tournament (not player-specific).',
-    price: '₹100 / player',
     deliverables: ['General Shorts', 'Photos'],
   },
 ];
@@ -52,12 +49,12 @@ const INITIAL = {
   // Step 1
   name: '',
   sport: '',
+  facilityId: null,
   facilityName: '',
   startDate: '',
   startTime: '',
   endDate: '',
   endTime: '',
-  numArenas: 1,
   participants: '',
   bannerFile: null,
   bannerPreview: null,
@@ -108,18 +105,20 @@ export default function CreateTournamentPage() {
       }
     }
 
+    const arenas = FACILITY_ARENAS[form.facilityId] || [];
+
     const { data: tournament, error: tError } = await supabase
       .from('tournaments')
       .insert({
         name: form.name,
         sport: form.sport,
-        facility_id: null,
+        facility_id: form.facilityId,
         facility_name: form.facilityName,
         start_date: form.startDate,
         start_time: form.startTime,
         end_date: form.endDate,
         end_time: form.endTime,
-        num_arenas: form.numArenas,
+        num_arenas: arenas.length,
         participants: form.participants ? parseInt(form.participants) : null,
         notes: form.notes || null,
         package_id: form.packageId,
@@ -297,6 +296,13 @@ function StepBasics({ form, set }) {
     reader.readAsDataURL(file);
   };
 
+  const handleFacilityChange = (e) => {
+    const id = e.target.value ? Number(e.target.value) : null;
+    const facility = FACILITIES.find(f => f.id === id);
+    set('facilityId', id);
+    set('facilityName', facility?.name || '');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Tournament Details">
@@ -317,12 +323,12 @@ function StepBasics({ form, set }) {
             </select>
           </Field>
           <Field label="Facility" required>
-            <input
-              className="input"
-              placeholder="Your facility's name"
-              value={form.facilityName}
-              onChange={e => set('facilityName', e.target.value)}
-            />
+            <select className="input" value={form.facilityId ?? ''} onChange={handleFacilityChange}>
+              <option value="" disabled />
+              {FACILITIES.map(f => (
+                <option key={f.id} value={f.id}>{f.name} · {f.city}</option>
+              ))}
+            </select>
           </Field>
         </div>
       </Section>
@@ -345,19 +351,14 @@ function StepBasics({ form, set }) {
       </Section>
 
       <Section title="Scope">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Field label="Number of Arenas">
-            <CounterInput value={form.numArenas} min={1} max={20} onChange={v => set('numArenas', v)} />
-          </Field>
-          <Field label="Expected Participants">
-            <input
-              className="input" type="number" min={1}
-              placeholder="e.g. 64"
-              value={form.participants}
-              onChange={e => set('participants', e.target.value)}
-            />
-          </Field>
-        </div>
+        <Field label="Expected Participants">
+          <input
+            className="input" type="number" min={1}
+            placeholder="e.g. 64"
+            value={form.participants}
+            onChange={e => set('participants', e.target.value)}
+          />
+        </Field>
         <Field label="Notes (optional)">
           <textarea
             className="input"
@@ -452,7 +453,6 @@ function StepDeliverables({ form, set }) {
           badgeCls="badge-gray"
         />
       </Section>
-
     </div>
   );
 }
@@ -481,73 +481,104 @@ function AddOnRow({ icon, label, description, checked, onChange, badge, badgeCls
 
 // ─── Step 3: Schedule ─────────────────────────────────────────────────────────
 
+function toDatetimeLocal(date, time) {
+  return date ? `${date}T${time || '00:00'}` : '';
+}
+
 function StepSchedule({ form, set }) {
-  const [newGame, setNewGame] = useState({ arena: 1, startTime: '', endTime: '', label: '' });
+  const arenaOptions = FACILITY_ARENAS[form.facilityId] || [];
+  const [newGame, setNewGame] = useState({
+    arena: '',
+    startTime: toDatetimeLocal(form.startDate, form.startTime),
+    endTime: toDatetimeLocal(form.endDate, form.endTime),
+    label: '',
+  });
 
   const addGame = () => {
-    if (!newGame.startTime || !newGame.endTime) return;
+    if (!newGame.startTime || !newGame.endTime || !newGame.arena) return;
     set('games', [...form.games, { ...newGame, id: Date.now() }]);
-    setNewGame({ arena: 1, startTime: '', endTime: '', label: '' });
+    setNewGame(g => ({ ...g, arena: '' }));
   };
 
   const removeGame = (id) => set('games', form.games.filter(g => g.id !== id));
 
-  const duplicateGame = (g) => {
-    const nextArena = (g.arena % form.numArenas) + 1;
-    set('games', [...form.games, { ...g, arena: nextArena, id: Date.now() }]);
+  // Populate the add-match form from a duplicated match; arena stays blank
+  const duplicateToForm = (g) => {
+    setNewGame({ arena: '', startTime: g.startTime, endTime: g.endTime, label: g.label });
   };
 
-  const arenaOptions = Array.from({ length: form.numArenas }, (_, i) => i + 1);
   const covered = form.games.length;
-  const needed = form.numArenas;
-  const allCovered = covered >= needed;
+  const needed = arenaOptions.length;
+  const allCovered = needed > 0 && covered >= needed;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Section title="Add Matches">
+      <Section title="Add Match">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 10 }}>
-            <Field label="Arena">
-              <select className="input" value={newGame.arena} onChange={e => setNewGame(g => ({ ...g, arena: parseInt(e.target.value) }))}>
-                {arenaOptions.map(a => <option key={a} value={a}>Arena {a}</option>)}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Field label="Arena" required>
+              <select
+                className="input"
+                value={newGame.arena}
+                onChange={e => setNewGame(g => ({ ...g, arena: e.target.value }))}
+              >
+                <option value="" disabled />
+                {arenaOptions.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </Field>
             <Field label="Match Label (optional)">
-              <input className="input" placeholder="QF1, Semi-Final A…" value={newGame.label} onChange={e => setNewGame(g => ({ ...g, label: e.target.value }))} />
+              <input
+                className="input"
+                placeholder="QF1, Semi-Final A…"
+                value={newGame.label}
+                onChange={e => setNewGame(g => ({ ...g, label: e.target.value }))}
+              />
             </Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Start Time">
-              <input className="input" type="datetime-local" value={newGame.startTime} onChange={e => setNewGame(g => ({ ...g, startTime: e.target.value }))} />
+              <input
+                className="input"
+                type="datetime-local"
+                value={newGame.startTime}
+                onChange={e => setNewGame(g => ({ ...g, startTime: e.target.value }))}
+              />
             </Field>
             <Field label="End Time">
-              <input className="input" type="datetime-local" value={newGame.endTime} onChange={e => setNewGame(g => ({ ...g, endTime: e.target.value }))} />
+              <input
+                className="input"
+                type="datetime-local"
+                value={newGame.endTime}
+                onChange={e => setNewGame(g => ({ ...g, endTime: e.target.value }))}
+              />
             </Field>
           </div>
 
           {/* Arena coverage hint */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 12, fontWeight: 600,
-            color: allCovered ? 'var(--green)' : '#f79009',
-          }}>
-            {allCovered ? (
-              <>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
-                All {needed} arena{needed > 1 ? 's' : ''} covered
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                {needed} arena{needed > 1 ? 's' : ''} selected · {covered} match{covered !== 1 ? 'es' : ''} added{covered < needed ? ` · need ${needed - covered} more` : ''}
-              </>
-            )}
-          </div>
+          {needed > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: 12, fontWeight: 600,
+              color: allCovered ? 'var(--green)' : '#f79009',
+            }}>
+              {allCovered ? (
+                <>
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+                  All {needed} arena{needed > 1 ? 's' : ''} covered
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  {needed} arena{needed > 1 ? 's' : ''} · {covered} match{covered !== 1 ? 'es' : ''} added{covered < needed ? ` · need ${needed - covered} more` : ''}
+                </>
+              )}
+            </div>
+          )}
 
           <button
             className="btn-ghost"
             onClick={addGame}
-            disabled={!newGame.startTime || !newGame.endTime}
+            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena}
             style={{ width: '100%', justifyContent: 'center', height: 38 }}
           >
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -575,22 +606,29 @@ function StepSchedule({ form, set }) {
                 }}>{i + 1}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>
-                    Arena {g.arena}{g.label ? ` · ${g.label}` : ''}
+                    {g.arena}{g.label ? ` · ${g.label}` : ''}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     {fmt(g.startTime)} → {fmt(g.endTime)}
                   </div>
                 </div>
-                {/* Duplicate button */}
+                {/* Duplicate button — fills the form above */}
                 <button
-                  onClick={() => duplicateGame(g)}
-                  title="Duplicate to next arena"
-                  style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4 }}
+                  onClick={() => duplicateToForm(g)}
+                  title="Copy to form"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: 7, padding: '4px 8px',
+                    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+                    cursor: 'pointer', flexShrink: 0,
+                  }}
                 >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <rect x="9" y="9" width="13" height="13" rx="2" />
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                   </svg>
+                  Duplicate
                 </button>
                 {/* Remove button */}
                 <button
@@ -629,7 +667,6 @@ function StepReview({ form }) {
         <ReviewRow label="Facility" value={form.facilityName} />
         <ReviewRow label="Date" value={form.startDate ? `${form.startDate} → ${form.endDate || form.startDate}` : '—'} />
         <ReviewRow label="Time" value={`${form.startTime} – ${form.endTime}`} />
-        <ReviewRow label="Arenas" value={form.numArenas} />
         <ReviewRow label="Participants" value={form.participants ? `~${form.participants} players` : '—'} />
         {form.notes && <ReviewRow label="Notes" value={form.notes} />}
       </ReviewSection>
@@ -637,7 +674,6 @@ function StepReview({ form }) {
       <ReviewSection title="Deliverables">
         <ReviewRow label="Package" value={pkg?.label} />
         <ReviewRow label="Includes" value={pkg?.deliverables.join(', ')} />
-        <ReviewRow label="Pricing" value={pkg?.price} accent />
         {form.addLivestream && <ReviewRow label="Livestream" value="₹250/hr per camera" accent />}
         {form.addVAR && <ReviewRow label="VAR" value="Pricing TBD" />}
       </ReviewSection>
@@ -646,7 +682,7 @@ function StepReview({ form }) {
         <ReviewSection title={`Schedule (${form.games.length} matches)`}>
           {form.games.map((g, i) => (
             <ReviewRow key={g.id} label={`Match ${i + 1}`}
-              value={`Arena ${g.arena}${g.label ? ` · ${g.label}` : ''} · ${fmt(g.startTime)} → ${fmt(g.endTime)}`} />
+              value={`${g.arena}${g.label ? ` · ${g.label}` : ''} · ${fmt(g.startTime)} → ${fmt(g.endTime)}`} />
           ))}
         </ReviewSection>
       )}
@@ -795,45 +831,8 @@ function Field({ label, required, children }) {
   );
 }
 
-function CounterInput({ value, onChange, min = 1, max = 20 }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center',
-      background: 'var(--surface2)', border: '1px solid var(--border)',
-      borderRadius: 10, overflow: 'hidden', height: 42,
-    }}>
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(min, value - 1))}
-        disabled={value <= min}
-        style={{
-          width: 42, height: '100%', border: 'none', background: 'none',
-          fontSize: 18, color: value <= min ? 'var(--border)' : 'var(--text)',
-          cursor: value <= min ? 'default' : 'pointer', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >−</button>
-      <div style={{
-        flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 15,
-        color: 'var(--text)', userSelect: 'none',
-      }}>{value}</div>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, value + 1))}
-        disabled={value >= max}
-        style={{
-          width: 42, height: '100%', border: 'none', background: 'none',
-          fontSize: 18, color: value >= max ? 'var(--border)' : 'var(--text)',
-          cursor: value >= max ? 'default' : 'pointer', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >+</button>
-    </div>
-  );
-}
-
 function isStepValid(step, form) {
-  if (step === 0) return form.name && form.sport && form.facilityName && form.startDate && form.endDate;
+  if (step === 0) return form.name && form.sport && form.facilityId && form.startDate && form.endDate;
   return true;
 }
 
