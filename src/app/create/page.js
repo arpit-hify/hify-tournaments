@@ -54,9 +54,9 @@ const INITIAL = {
   sport: '',
   facilityName: '',
   startDate: '',
-  startTime: '09:00',
+  startTime: '',
   endDate: '',
-  endTime: '22:00',
+  endTime: '',
   numArenas: 1,
   participants: '',
   bannerFile: null,
@@ -312,7 +312,7 @@ function StepBasics({ form, set }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="Sport" required>
             <select className="input" value={form.sport} onChange={e => set('sport', e.target.value)}>
-              <option value="">Select sport</option>
+              <option value="" disabled />
               {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </Field>
