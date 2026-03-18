@@ -791,7 +791,7 @@ function fmt12(t) {
 }
 
 function StepSchedule({ form, set }) {
-  const allArenas = FACILITY_ARENAS[form.facilityId] || [];
+  const allArenas = (FACILITY_ARENAS[form.facilityId] || []).slice(0, form.numArenas || undefined);
   const arenaOptions = allArenas;
   const [newGame, setNewGame] = useState({
     arena: '',
