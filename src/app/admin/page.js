@@ -78,6 +78,7 @@ const PACKAGES_LIST = [
   { id: 'semis', label: 'Personalized Reels + Shorts – Semis & Finals' },
   { id: 'shorts_all', label: 'Personalized Shorts – All Players' },
   { id: 'general', label: 'General Shorts – All Players' },
+  { id: 'photos_only', label: 'Only Photos' },
 ];
 
 const SPORT_EMOJI = {

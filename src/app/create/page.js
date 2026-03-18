@@ -34,6 +34,12 @@ const PACKAGES = [
     description: 'Event-level short clips for the tournament (not player-specific).',
     deliverables: ['General Shorts', 'Photos'],
   },
+  {
+    id: 'photos_only',
+    label: 'Only Photos',
+    description: 'Professional event photography for all games — no video content.',
+    deliverables: ['Photos'],
+  },
 ];
 
 const STEPS = [

@@ -27,4 +27,9 @@ export const PACKAGES = {
     deliverables: ['General Shorts', 'Photos'],
     price: 100,
   },
+  photos_only: {
+    label: 'Only Photos',
+    deliverables: ['Photos'],
+    price: 0,
+  },
 };
