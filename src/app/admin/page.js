@@ -115,6 +115,7 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && sessionStorage.getItem('admin_auth') === 'true') {
@@ -241,6 +242,16 @@ export default function AdminPage() {
       setEditForm(null);
     }
     setSaving(false);
+  }
+
+  async function changeStatus(newStatus) {
+    if (!selected || selected.status === newStatus) return;
+    setChangingStatus(true);
+    await supabase.from('tournaments').update({ status: newStatus }).eq('id', selected.id);
+    const updated = { ...selected, status: newStatus };
+    setSelected(updated);
+    setTournaments(prev => prev.map(t => t.id === updated.id ? { ...t, status: newStatus } : t));
+    setChangingStatus(false);
   }
 
   async function verifyAndDownload() {
@@ -417,6 +428,8 @@ export default function AdminPage() {
             onEdit={startEdit}
             onVerifyDownload={verifyAndDownload}
             verifying={verifying}
+            onChangeStatus={changeStatus}
+            changingStatus={changingStatus}
             formatDate={formatDate}
             formatTime={formatTime}
           />
@@ -468,7 +481,13 @@ function ListRow({ tournament: t, isSelected, onClick, formatDate }) {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, formatDate, formatTime }) {
+const STATUS_STYLE = {
+  upcoming: { color: '#b45309', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)' },
+  live:     { color: 'var(--green)', bg: 'rgba(18,183,106,0.12)', border: 'rgba(18,183,106,0.35)' },
+  completed:{ color: 'var(--muted)', bg: 'var(--surface2)', border: 'var(--border)' },
+};
+
+function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onChangeStatus, changingStatus, formatDate, formatTime }) {
   const pkg = PACKAGES[t.package_id];
 
   return (
@@ -520,7 +539,34 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, forma
         {t.participants && <DetailRow label="Participants" value={`${t.participants} players`} />}
         {t.notes && <DetailRow label="Notes" value={t.notes} />}
         <DetailRow label="Join Link" value={t.join_link} accent />
-        <DetailRow label="Status" value={t.status} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+          <span style={{ color: 'var(--muted)', minWidth: 100, flexShrink: 0 }}>Status</span>
+          {t.verified ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['upcoming', 'live', 'completed'].map(s => {
+                const st = STATUS_STYLE[s];
+                const active = t.status === s;
+                return (
+                  <button key={s} type="button"
+                    onClick={() => onChangeStatus(s)}
+                    disabled={active || changingStatus}
+                    style={{
+                      padding: '4px 12px', borderRadius: 100, fontSize: 11, fontWeight: 700,
+                      border: `1.5px solid ${active ? st.border : 'var(--border)'}`,
+                      background: active ? st.bg : 'transparent',
+                      color: active ? st.color : 'var(--muted)',
+                      cursor: active ? 'default' : 'pointer',
+                      textTransform: 'capitalize', transition: 'all 0.15s',
+                      opacity: changingStatus && !active ? 0.5 : 1,
+                    }}
+                  >{s}</button>
+                );
+              })}
+            </div>
+          ) : (
+            <span style={{ color: 'var(--text)', fontWeight: 500, textTransform: 'capitalize' }}>{t.status}</span>
+          )}
+        </div>
         <DetailRow label="Submitted" value={new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} />
       </DetailCard>
 
