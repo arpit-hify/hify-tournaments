@@ -786,26 +786,31 @@ function StepSchedule({ form, set }) {
   const arenaOptions = allArenas;
   const [newGame, setNewGame] = useState({
     arena: '',
-    startTime: toDatetimeLocal(form.startDate, form.startTime),
-    endTime: toDatetimeLocal(form.endDate, form.endTime),
+    startDate: '',
+    startTime: form.startTime || '',
+    endDate: '',
+    endTime: form.endTime || '',
     label: '',
   });
 
-  const matchTimeError = newGame.startTime && newGame.endTime && newGame.endTime <= newGame.startTime
+  const startDT = joinDT(newGame.startDate, newGame.startTime);
+  const endDT = joinDT(newGame.endDate, newGame.endTime);
+
+  const matchTimeError = startDT && endDT && endDT <= startDT
     ? 'End time must be after start time'
     : null;
 
-  const isDuplicate = !!(newGame.arena && newGame.startTime && newGame.endTime &&
+  const isDuplicate = !!(newGame.arena && startDT && endDT &&
     form.games.some(g =>
       g.arena === newGame.arena &&
-      g.startTime === newGame.startTime &&
-      g.endTime === newGame.endTime
+      g.startTime === startDT &&
+      g.endTime === endDT
     ));
 
   const addGame = () => {
-    if (!newGame.startTime || !newGame.endTime || !newGame.arena || matchTimeError || isDuplicate) return;
-    set('games', [...form.games, { ...newGame, id: Date.now() }]);
-    setNewGame(g => ({ ...g, arena: '' }));
+    if (!startDT || !endDT || !newGame.arena || matchTimeError || isDuplicate) return;
+    set('games', [...form.games, { arena: newGame.arena, startTime: startDT, endTime: endDT, label: newGame.label, id: Date.now() }]);
+    setNewGame(g => ({ ...g, arena: '', startDate: '', endDate: '' }));
   };
 
   const removeGame = (id) => set('games', form.games.filter(g => g.id !== id));
@@ -837,26 +842,26 @@ function StepSchedule({ form, set }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Start Date" required>
               <DateInput
-                value={splitDT(newGame.startTime).date}
-                onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(v, splitDT(g.startTime).time) }))}
+                value={newGame.startDate}
+                onChange={v => setNewGame(g => ({ ...g, startDate: v }))}
               />
             </Field>
             <Field label="Start Time" required>
               <TimePicker
-                value={splitDT(newGame.startTime).time}
-                onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(splitDT(g.startTime).date, v) }))}
+                value={newGame.startTime}
+                onChange={v => setNewGame(g => ({ ...g, startTime: v }))}
               />
             </Field>
             <Field label="End Date" required>
               <DateInput
-                value={splitDT(newGame.endTime).date}
-                onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(v, splitDT(g.endTime).time) }))}
+                value={newGame.endDate}
+                onChange={v => setNewGame(g => ({ ...g, endDate: v }))}
               />
             </Field>
             <Field label="End Time" required>
               <TimePicker
-                value={splitDT(newGame.endTime).time}
-                onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(splitDT(g.endTime).date, v) }))}
+                value={newGame.endTime}
+                onChange={v => setNewGame(g => ({ ...g, endTime: v }))}
                 error={!!matchTimeError}
               />
               {matchTimeError && <FieldError>{matchTimeError}</FieldError>}
@@ -867,7 +872,7 @@ function StepSchedule({ form, set }) {
           <button
             className="btn-primary"
             onClick={addGame}
-            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena || !!matchTimeError || isDuplicate}
+            disabled={!startDT || !endDT || !newGame.arena || !!matchTimeError || isDuplicate}
             style={{ width: '100%', justifyContent: 'center', height: 38 }}
           >
             Create Game
