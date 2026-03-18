@@ -223,8 +223,8 @@ export default function CreateTournamentPage() {
           tournament_id: tournament.id,
           arena: g.arena,
           label: g.label || null,
-          start_time: g.startTime || null,
-          end_time: g.endTime || null,
+          start_time: g.startTime ? new Date(g.startTime).toISOString() : null,
+          end_time: g.endTime ? new Date(g.endTime).toISOString() : null,
         }))
       );
     }

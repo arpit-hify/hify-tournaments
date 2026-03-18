@@ -116,6 +116,12 @@ function TimePicker({ value, onChange, error }) {
   );
 }
 
+// Convert a UTC Date object to a local "YYYY-MM-DDTHH:mm" string (for form inputs)
+function toLocalDT(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 // ─── Main Edit Page ───────────────────────────────────────────────────────────
 
 export default function EditTournamentPage() {
@@ -157,14 +163,13 @@ export default function EditTournamentPage() {
         .order('start_time', { ascending: true });
 
       // Convert DB games to form format
-      // DB start_time/end_time are stored as UTC timestamps ("YYYY-MM-DDTHH:mm:ss+00:00")
-      // We extract the UTC digits to preserve the original entered time
+      // DB timestamps are UTC — convert to local IST "YYYY-MM-DDTHH:mm" for form pickers
       const formGames = (games || []).map(g => ({
         id: g.id,
         arena: g.arena || '',
         label: g.label || '',
-        startTime: g.start_time ? new Date(g.start_time).toISOString().slice(0, 16) : '',
-        endTime: g.end_time ? new Date(g.end_time).toISOString().slice(0, 16) : '',
+        startTime: g.start_time ? toLocalDT(new Date(g.start_time)) : '',
+        endTime: g.end_time ? toLocalDT(new Date(g.end_time)) : '',
       }));
 
       setForm({
@@ -271,8 +276,8 @@ export default function EditTournamentPage() {
           tournament_id: id,
           arena: g.arena,
           label: g.label || null,
-          start_time: g.startTime || null,
-          end_time: g.endTime || null,
+          start_time: g.startTime ? new Date(g.startTime).toISOString() : null,
+          end_time: g.endTime ? new Date(g.endTime).toISOString() : null,
         }))
       );
     }
@@ -1032,20 +1037,18 @@ function StepSchedule({ form, set }) {
   );
 }
 
-// Format a "YYYY-MM-DDTHH:mm" UTC string for display
-// We append Z so JS treats it as UTC, then display in UTC to preserve the original digits
+// Format a local "YYYY-MM-DDTHH:mm" string for display in DD/Mon/YYYY 12-hr IST
 function fmtGameTime(s) {
   if (!s) return '—';
-  // s is like "2024-01-15T10:00" — treat as UTC
-  const d = new Date(s.length === 16 ? s + ':00Z' : s);
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  const mon = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-  const h = d.getUTCHours();
-  const m = d.getUTCMinutes();
+  const d = new Date(s); // parse as local (IST)
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  const h = d.getHours();
+  const m = d.getMinutes();
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
   const time = `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-  return `${dd}/${mon}/${d.getUTCFullYear()} ${time}`;
+  return `${dd}/${mon}/${d.getFullYear()} ${time}`;
 }
 
 // ─── Step 4: Review ───────────────────────────────────────────────────────────

@@ -598,8 +598,8 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
                 </div>
                 {g.start_time && (
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>
-                    {new Date(g.start_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })}
-                    {g.end_time && ` → ${new Date(g.end_time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })}`}
+                    {new Date(g.start_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}
+                    {g.end_time && ` → ${new Date(g.end_time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}`}
                   </div>
                 )}
               </div>
