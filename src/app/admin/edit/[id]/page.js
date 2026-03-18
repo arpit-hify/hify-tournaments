@@ -167,7 +167,6 @@ export default function EditTournamentPage() {
       const formGames = (games || []).map(g => ({
         id: g.id,
         arena: g.arena || '',
-        label: g.label || '',
         startTime: g.start_time ? toLocalDT(new Date(g.start_time)) : '',
         endTime: g.end_time ? toLocalDT(new Date(g.end_time)) : '',
       }));
@@ -275,7 +274,6 @@ export default function EditTournamentPage() {
         form.games.map(g => ({
           tournament_id: id,
           arena: g.arena,
-          label: g.label || null,
           start_time: g.startTime ? new Date(g.startTime).toISOString() : null,
           end_time: g.endTime ? new Date(g.endTime).toISOString() : null,
         }))
@@ -915,7 +913,6 @@ function StepSchedule({ form, set }) {
     startTime: form.startTime || '',
     endDate: '',
     endTime: form.endTime || '',
-    label: '',
   });
 
   const startDT = newGame.startDate && newGame.startTime ? `${newGame.startDate}T${newGame.startTime}` : '';
@@ -934,7 +931,7 @@ function StepSchedule({ form, set }) {
 
   const addGame = () => {
     if (!startDT || !endDT || !newGame.arena || matchTimeError || isDuplicate) return;
-    set('games', [...form.games, { arena: newGame.arena, startTime: startDT, endTime: endDT, label: newGame.label, id: Date.now() }]);
+    set('games', [...form.games, { arena: newGame.arena, startTime: startDT, endTime: endDT, id: Date.now() }]);
     setNewGame(g => ({ ...g, arena: '', startDate: '', endDate: '' }));
   };
 
@@ -976,7 +973,7 @@ function StepSchedule({ form, set }) {
             <Field label="Start Date" required>
               <DateInput
                 value={newGame.startDate}
-                onChange={v => setNewGame(g => ({ ...g, startDate: v, endDate: g.endDate || v }))}
+                onChange={v => setNewGame(g => ({ ...g, startDate: v, endDate: v }))}
               />
             </Field>
             <Field label="Start Time" required>
@@ -1030,7 +1027,7 @@ function StepSchedule({ form, set }) {
                 }}>{i + 1}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>
-                    {g.arena}{g.label ? ` · ${g.label}` : ''}
+                    {g.arena}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     {fmtGameTime(g.startTime)} → {fmtGameTime(g.endTime)}
@@ -1112,7 +1109,7 @@ function StepReview({ form }) {
         <ReviewSection title={`Schedule (${form.games.length} games)`}>
           {form.games.map((g, i) => (
             <ReviewRow key={g.id} label={`Game ${i + 1}`}
-              value={`${g.arena}${g.label ? ` · ${g.label}` : ''} · ${fmtGameTime(g.startTime)} → ${fmtGameTime(g.endTime)}`} />
+              value={`${g.arena} · ${fmtGameTime(g.startTime)} → ${fmtGameTime(g.endTime)}`} />
           ))}
         </ReviewSection>
       )}
