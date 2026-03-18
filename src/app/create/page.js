@@ -464,7 +464,7 @@ function StepBasics({ form, set }) {
       <Section title="Scope">
         {form.facilityId && (() => {
           const maxArenas = (FACILITY_ARENAS[form.facilityId] || []).length;
-          const current = form.numArenas ?? 1;
+          const current = Math.min(form.numArenas ?? 1, maxArenas);
           return (
             <Field label="Arenas used for this tournament">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -624,8 +624,15 @@ function StepSchedule({ form, set }) {
     ? 'End time must be after start time'
     : null;
 
+  const isDuplicate = !!(newGame.arena && newGame.startTime && newGame.endTime &&
+    form.games.some(g =>
+      g.arena === newGame.arena &&
+      g.startTime === newGame.startTime &&
+      g.endTime === newGame.endTime
+    ));
+
   const addGame = () => {
-    if (!newGame.startTime || !newGame.endTime || !newGame.arena || matchTimeError) return;
+    if (!newGame.startTime || !newGame.endTime || !newGame.arena || matchTimeError || isDuplicate) return;
     set('games', [...form.games, { ...newGame, id: Date.now() }]);
     setNewGame(g => ({ ...g, arena: '' }));
   };
@@ -661,7 +668,7 @@ function StepSchedule({ form, set }) {
             </Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Start Time">
+            <Field label="Start Time" required>
               <input
                 className="input"
                 type="datetime-local"
@@ -669,7 +676,7 @@ function StepSchedule({ form, set }) {
                 onChange={e => setNewGame(g => ({ ...g, startTime: e.target.value }))}
               />
             </Field>
-            <Field label="End Time">
+            <Field label="End Time" required>
               <input
                 className="input"
                 type="datetime-local"
@@ -691,7 +698,7 @@ function StepSchedule({ form, set }) {
               {allCovered ? (
                 <>
                   <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
-                  All {needed} arena{needed > 1 ? 's' : ''} covered
+                  {needed} arena{needed > 1 ? 's' : ''} covered
                 </>
               ) : (
                 <>
@@ -705,11 +712,12 @@ function StepSchedule({ form, set }) {
           <button
             className="btn-primary"
             onClick={addGame}
-            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena || !!matchTimeError}
+            disabled={!newGame.startTime || !newGame.endTime || !newGame.arena || !!matchTimeError || isDuplicate}
             style={{ width: '100%', justifyContent: 'center', height: 38 }}
           >
             Create Game
           </button>
+          {isDuplicate && <FieldError>A game for this arena already exists at the same time</FieldError>}
         </div>
       </Section>
 
