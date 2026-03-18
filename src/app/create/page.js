@@ -434,22 +434,26 @@ function fmtDateDisplay(dateStr) {
 
 // Wraps <input type="date"> with a formatted DD/Mon/YYYY overlay
 function DateInput({ value, onChange, error }) {
+  const ref = useRef(null);
   return (
-    <div style={{ position: 'relative' }}>
-      <div className="input" style={{
+    <div
+      className="input"
+      style={{
+        position: 'relative', cursor: 'pointer',
         color: value ? 'var(--text)' : 'var(--muted)',
         borderColor: error ? 'var(--red)' : undefined,
-        pointerEvents: 'none', userSelect: 'none',
-      }}>
-        {value ? fmtDateDisplay(value) : ''}
-      </div>
+      }}
+      onClick={() => ref.current?.showPicker?.()}
+    >
+      {value ? fmtDateDisplay(value) : ''}
       <input
+        ref={ref}
         type="date"
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{
           position: 'absolute', inset: 0, opacity: 0,
-          cursor: 'pointer', width: '100%', height: '100%', zIndex: 1,
+          cursor: 'pointer', width: '100%', height: '100%',
         }}
       />
     </div>
