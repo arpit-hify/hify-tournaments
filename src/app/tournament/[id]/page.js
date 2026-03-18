@@ -79,6 +79,17 @@ export default function TournamentDetailPage() {
   const pkg = PACKAGES[t.package_id];
 
   return (
+    <>
+      <header style={{
+        display: 'flex', alignItems: 'center',
+        padding: '0 16px', height: 52,
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg)',
+        position: 'sticky', top: 0, zIndex: 50,
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+      </header>
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '14px 14px 40px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -196,6 +207,7 @@ export default function TournamentDetailPage() {
         {t.notes && <InfoRow label="Notes" value={t.notes} />}
       </div>
     </div>
+    </>
   );
 }
 

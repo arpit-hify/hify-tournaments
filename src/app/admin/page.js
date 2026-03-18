@@ -338,7 +338,18 @@ export default function AdminPage() {
   });
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+    <>
+      <header style={{
+        display: 'flex', alignItems: 'center',
+        padding: '0 16px', height: 52,
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg)',
+        position: 'sticky', top: 0, zIndex: 50, flexShrink: 0,
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+      </header>
+    <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', background: 'var(--bg)' }}>
 
       {/* ── Left panel: list ── */}
       <div style={{
@@ -437,6 +448,7 @@ export default function AdminPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

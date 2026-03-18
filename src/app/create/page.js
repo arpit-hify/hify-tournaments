@@ -231,18 +231,22 @@ export default function CreateTournamentPage() {
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 14px 80px' }}>
 
-      {/* Sticky title + step bar */}
-      <div style={{
+      {/* Sticky header: back + logo + step dots */}
+      <header style={{
         position: 'sticky',
-        top: 52,
-        zIndex: 40,
+        top: 0,
+        zIndex: 50,
         background: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
+        height: 52,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         margin: '0 -14px',
-        padding: '10px 14px 14px',
+        padding: '0 14px',
         marginBottom: 24,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             className="btn-icon"
             onClick={() => step === 0 ? router.push('/') : goBack()}
@@ -252,10 +256,11 @@ export default function CreateTournamentPage() {
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <h1 className="font-display" style={{ fontSize: 16, fontWeight: 700 }}>Tournament Request</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
         </div>
-        <StepBar step={step} />
-      </div>
+        <StepDots step={step} />
+      </header>
 
       {/* Step content */}
       <div className="slide-up" key={step}>
@@ -411,6 +416,41 @@ function FacilityAutocomplete({ facilityId, facilityName, onChange }) {
           No facilities found
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Compact step dots (for header) ──────────────────────────────────────────
+
+function StepDots({ step }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      {STEPS.map((s, i) => (
+        <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: '50%',
+            background: i < step ? 'var(--green)' : i === step ? 'var(--accent)' : 'var(--surface2)',
+            border: `2px solid ${i < step ? 'var(--green)' : i === step ? 'var(--accent)' : 'var(--border)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 10, fontWeight: 700, color: i <= step ? '#fff' : 'var(--muted)',
+            transition: 'all 0.2s',
+            flexShrink: 0,
+          }}>
+            {i < step ? (
+              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : i + 1}
+          </div>
+          {i < STEPS.length - 1 && (
+            <div style={{
+              width: 18, height: 2,
+              background: i < step ? 'var(--green)' : 'var(--border)',
+              transition: 'background 0.3s',
+            }} />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
