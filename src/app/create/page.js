@@ -246,7 +246,7 @@ export default function CreateTournamentPage() {
         zIndex: 50,
         background: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
-        height: 52,
+        height: 64,
         display: 'flex',
         alignItems: 'center',
         gap: 10,
@@ -265,7 +265,7 @@ export default function CreateTournamentPage() {
         </button>
         <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-dark.png" alt="HiFy" style={{ height: 20, width: 'auto' }} />
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 32, width: 'auto' }} />
         </a>
       </header>
 
@@ -866,7 +866,10 @@ function StepSchedule({ form, set }) {
 function fmt(s) {
   if (!s) return '—';
   const d = new Date(s);
-  return d.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${dd}/${mon}/${d.getFullYear()} ${time}`;
 }
 
 // ─── Step 4: Review ───────────────────────────────────────────────────────────
