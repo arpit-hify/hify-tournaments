@@ -962,26 +962,16 @@ function StepSchedule({ form, set }) {
       </div>
       <Section title="Add Game">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Arena" required>
-              <select
-                className="input"
-                value={newGame.arena}
-                onChange={e => setNewGame(g => ({ ...g, arena: e.target.value }))}
-              >
-                <option value="" disabled />
-                {allArenas.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </Field>
-            <Field label="Game Label (optional)">
-              <input
-                className="input"
-                placeholder="QF1, Semi-Final A…"
-                value={newGame.label}
-                onChange={e => setNewGame(g => ({ ...g, label: e.target.value }))}
-              />
-            </Field>
-          </div>
+          <Field label="Arena" required>
+            <select
+              className="input"
+              value={newGame.arena}
+              onChange={e => setNewGame(g => ({ ...g, arena: e.target.value }))}
+            >
+              <option value="" disabled />
+              {allArenas.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Start Date" required>
               <DateInput
