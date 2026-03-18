@@ -349,8 +349,10 @@ export default function AdminPage() {
         background: 'var(--bg)',
         position: 'sticky', top: 0, zIndex: 50, flexShrink: 0,
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+        <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="HiFy" style={{ height: 22, width: 'auto' }} />
+        </a>
       </header>
     <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', background: 'var(--bg)' }}>
 
