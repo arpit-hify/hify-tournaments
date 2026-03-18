@@ -556,7 +556,7 @@ function StepBasics({ form, set }) {
         <Field label="Notes (optional)">
           <textarea
             className="input"
-            placeholder="Any special requirements or notes for the HiFy team…"
+            placeholder="e.g. this is a Dupr Night"
             value={form.notes}
             onChange={e => set('notes', e.target.value)}
             style={{ minHeight: 70 }}
