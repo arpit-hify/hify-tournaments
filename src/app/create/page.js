@@ -422,6 +422,40 @@ function FacilityAutocomplete({ facilityId, facilityName, onChange }) {
   );
 }
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+function fmtDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-US', { month: 'short' });
+  return `${dd}/${mon}/${d.getFullYear()}`;
+}
+
+// Wraps <input type="date"> with a formatted DD/Mon/YYYY overlay
+function DateInput({ value, onChange, error }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <div className="input" style={{
+        color: value ? 'var(--text)' : 'var(--muted)',
+        borderColor: error ? 'var(--red)' : undefined,
+        pointerEvents: 'none', userSelect: 'none',
+      }}>
+        {value ? fmtDateDisplay(value) : ''}
+      </div>
+      <input
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          position: 'absolute', inset: 0, opacity: 0,
+          cursor: 'pointer', width: '100%', height: '100%', zIndex: 1,
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Compact step dots (for header) ──────────────────────────────────────────
 
 function StepDots({ step }) {
@@ -552,17 +586,13 @@ function StepBasics({ form, set }) {
       <Section title="Date & Time">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="Start Date" required>
-            <input className="input" type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} style={{ color: form.startDate ? 'var(--text)' : 'transparent' }} />
+            <DateInput value={form.startDate} onChange={v => set('startDate', v)} />
           </Field>
           <Field label="Start Time">
             <TimePicker value={form.startTime} onChange={v => set('startTime', v)} />
           </Field>
           <Field label="End Date" required>
-            <input
-              className="input" type="date" value={form.endDate}
-              onChange={e => set('endDate', e.target.value)}
-              style={{ color: form.endDate ? 'var(--text)' : 'transparent', borderColor: endDateError ? 'var(--red)' : undefined }}
-            />
+            <DateInput value={form.endDate} onChange={v => set('endDate', v)} error={!!endDateError} />
             {endDateError && <FieldError>{endDateError}</FieldError>}
           </Field>
           <Field label="End Time">
@@ -778,11 +808,9 @@ function StepSchedule({ form, set }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Start Date" required>
-              <input
-                className="input" type="date"
+              <DateInput
                 value={splitDT(newGame.startTime).date}
-                onChange={e => setNewGame(g => ({ ...g, startTime: joinDT(e.target.value, splitDT(g.startTime).time) }))}
-                style={{ color: splitDT(newGame.startTime).date ? 'var(--text)' : 'transparent' }}
+                onChange={v => setNewGame(g => ({ ...g, startTime: joinDT(v, splitDT(g.startTime).time) }))}
               />
             </Field>
             <Field label="Start Time" required>
@@ -792,11 +820,9 @@ function StepSchedule({ form, set }) {
               />
             </Field>
             <Field label="End Date" required>
-              <input
-                className="input" type="date"
+              <DateInput
                 value={splitDT(newGame.endTime).date}
-                onChange={e => setNewGame(g => ({ ...g, endTime: joinDT(e.target.value, splitDT(g.endTime).time) }))}
-                style={{ color: splitDT(newGame.endTime).date ? 'var(--text)' : 'transparent' }}
+                onChange={v => setNewGame(g => ({ ...g, endTime: joinDT(v, splitDT(g.endTime).time) }))}
               />
             </Field>
             <Field label="End Time" required>
