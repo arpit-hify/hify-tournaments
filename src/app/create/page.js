@@ -294,14 +294,14 @@ export default function CreateTournamentPage() {
               style={{ flex: 1, height: 44, justifyContent: 'center' }}>
               {submitting ? (
                 <>
-                  <Spinner /> Creating…
+                  <Spinner /> Submitting…
                 </>
               ) : (
                 <>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Create Tournament
+                  Submit Tournament
                 </>
               )}
             </button>
