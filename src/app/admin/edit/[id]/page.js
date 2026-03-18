@@ -959,7 +959,7 @@ function StepSchedule({ form, set }) {
             <Field label="Start Date" required>
               <DateInput
                 value={newGame.startDate}
-                onChange={v => setNewGame(g => ({ ...g, startDate: v }))}
+                onChange={v => setNewGame(g => ({ ...g, startDate: v, endDate: g.endDate || v }))}
               />
             </Field>
             <Field label="Start Time" required>
