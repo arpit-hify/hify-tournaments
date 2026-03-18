@@ -35,11 +35,22 @@ function formatTime(timeStr) {
 export default function TournamentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const [authed, setAuthed] = useState(false);
   const [t, setT] = useState(null);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Auth guard — admin only
   useEffect(() => {
+    if (sessionStorage.getItem('admin_auth') !== 'true') {
+      router.replace('/admin');
+    } else {
+      setAuthed(true);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!authed) return;
     async function load() {
       const [{ data: tournament }, { data: gamesData }] = await Promise.all([
         supabase.from('tournaments').select('*').eq('id', id).single(),
@@ -50,7 +61,9 @@ export default function TournamentDetailPage() {
       setLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, authed]);
+
+  if (!authed) return null;
 
   if (loading) {
     return (

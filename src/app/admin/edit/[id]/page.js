@@ -128,6 +128,7 @@ export default function EditTournamentPage() {
   const router = useRouter();
   const { id } = useParams();
 
+  const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [step, setStep] = useState(0);
@@ -137,9 +138,18 @@ export default function EditTournamentPage() {
   const [slowUpload, setSlowUpload] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Auth guard — admin only
+  useEffect(() => {
+    if (sessionStorage.getItem('admin_auth') !== 'true') {
+      router.replace('/admin');
+    } else {
+      setAuthed(true);
+    }
+  }, [router]);
+
   // Load tournament + games from DB
   useEffect(() => {
-    if (!id) return;
+    if (!id || !authed) return;
     (async () => {
       setLoading(true);
       setLoadError(null);
@@ -202,7 +212,7 @@ export default function EditTournamentPage() {
       });
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, authed]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -287,6 +297,8 @@ export default function EditTournamentPage() {
     // Redirect back to admin after a brief moment
     setTimeout(() => router.push('/admin'), 1200);
   };
+
+  if (!authed) return null;
 
   if (loading) {
     return (
