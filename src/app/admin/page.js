@@ -697,8 +697,8 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
                 </div>
                 {g.start_time && (
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>
-                    {new Date(g.start_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                    {g.end_time && ` → ${new Date(g.end_time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`}
+                    {new Date(g.start_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })}
+                    {g.end_time && ` → ${new Date(g.end_time).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })}`}
                   </div>
                 )}
               </div>
@@ -756,9 +756,11 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
 const splitGameTime = (iso) => {
   if (!iso) return { date: '', time: '' };
   const d = new Date(iso);
-  const date = d.toLocaleDateString('en-CA');
-  const h = String(d.getHours()).padStart(2, '0');
-  const m = String(d.getMinutes()).padStart(2, '0');
+  // Use UTC values — game times are stored as plain "YYYY-MM-DDTHH:mm"
+  // without timezone so Postgres treats them as UTC; read them back as-is
+  const date = d.toISOString().slice(0, 10);
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const m = String(d.getUTCMinutes()).padStart(2, '0');
   return { date, time: `${h}:${m}` };
 };
 const joinGameTime = (date, time) => (date && time) ? `${date}T${time}` : null;
