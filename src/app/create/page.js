@@ -723,7 +723,7 @@ const joinDT = (date, time) => (date && time) ? `${date}T${time}` : '';
 
 function StepSchedule({ form, set }) {
   const allArenas = FACILITY_ARENAS[form.facilityId] || [];
-  const arenaOptions = form.numArenas ? allArenas.slice(0, form.numArenas) : allArenas;
+  const arenaOptions = allArenas;
   const [newGame, setNewGame] = useState({
     arena: '',
     startTime: toDatetimeLocal(form.startDate, form.startTime),
