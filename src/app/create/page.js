@@ -152,6 +152,7 @@ export default function CreateTournamentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [createdTournament, setCreatedTournament] = useState(null);
+  const [slowUpload, setSlowUpload] = useState(false);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -161,6 +162,8 @@ export default function CreateTournamentPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     setSubmitError(null);
+    setSlowUpload(false);
+    const slowTimer = setTimeout(() => setSlowUpload(true), 5000);
 
     // Upload banner to Supabase Storage if present (original quality)
     let bannerUrl = null;
@@ -203,6 +206,8 @@ export default function CreateTournamentPage() {
       .single();
 
     if (tError) {
+      clearTimeout(slowTimer);
+      setSlowUpload(false);
       setSubmitError(tError.message);
       setSubmitting(false);
       return;
@@ -221,6 +226,8 @@ export default function CreateTournamentPage() {
       );
     }
 
+    clearTimeout(slowTimer);
+    setSlowUpload(false);
     setCreatedTournament(tournament);
     setSubmitting(false);
     setSubmitted(true);
@@ -298,6 +305,11 @@ export default function CreateTournamentPage() {
             {submitError && (
               <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8, textAlign: 'center', width: '100%' }}>
                 {submitError}
+              </div>
+            )}
+            {slowUpload && (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, textAlign: 'center', width: '100%' }}>
+                Uploading your high quality banner — this may take a moment. Please don't close the page.
               </div>
             )}
             <button className="btn-primary" onClick={handleSubmit} disabled={submitting}
