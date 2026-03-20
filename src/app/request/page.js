@@ -1095,7 +1095,7 @@ function StepReview({ form }) {
       <ReviewSection title="Deliverables">
         <ReviewRow label="Package" value={pkg?.label} />
         <ReviewRow label="Includes" value={pkg?.deliverables.join(', ')} />
-        {form.addLivestream && <ReviewRow label="Livestream" value={form.livestreamChannel === 'own' ? 'Yes – Our YouTube Channel' : 'Yes – HiFy YouTube Channel'} />}
+        {form.addLivestream && <ReviewRow label="Livestream" value={form.livestreamChannel === 'own' ? `Yes – ${form.facilityName} YouTube Channel` : 'Yes – HiFy YouTube Channel'} />}
         {form.addVAR && <ReviewRow label="VAR" value="Yes" />}
         {form.discountCode && <ReviewRow label="Discount Code" value={form.discountCode.toUpperCase()} />}
       </ReviewSection>
