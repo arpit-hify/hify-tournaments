@@ -810,7 +810,7 @@ function StepDeliverables({ form, set, discountStatus, discountData, onValidateC
               type="button"
               className="btn-ghost"
               onClick={() => onValidateCode(form.discountCode)}
-              disabled={!form.discountCode.trim() || discountStatus === 'checking' || discountStatus === 'valid'}
+              disabled={!form.discountCode.trim()}
               style={{ height: 40, padding: '0 16px', fontSize: 13, flexShrink: 0 }}
             >
               {discountStatus === 'checking' ? 'Applying…' : discountStatus === 'valid' ? 'Applied' : 'Apply'}
