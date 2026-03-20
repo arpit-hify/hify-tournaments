@@ -16,30 +16,35 @@ const PACKAGES = [
     label: 'Personalized Reels + Shorts – All Players',
     description: 'Every registered player gets personalized reel & short highlights.',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
+    price: 200,
   },
   {
     id: 'semis',
     label: 'Personalized Reels + Shorts – Semis & Finals',
     description: 'Personalized content for semifinal and final stage players only.',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
+    price: 150,
   },
   {
     id: 'shorts_all',
     label: 'Personalized Shorts – All Players',
     description: 'Short-form highlights for all players plus general event shorts.',
     deliverables: ['Personalized Shorts', 'General Shorts', 'Photos'],
+    price: 150,
   },
   {
     id: 'general',
     label: 'General Shorts – All Players',
     description: 'Event-level short clips for the tournament (not player-specific).',
     deliverables: ['General Shorts', 'Photos'],
+    price: 100,
   },
   {
     id: 'photos_only',
     label: 'Only Photos',
     description: 'Professional event photography for all games — no video content.',
     deliverables: ['Photos'],
+    price: 0,
   },
 ];
 
@@ -136,7 +141,9 @@ const INITIAL = {
   // Step 2
   packageId: 'full',
   addLivestream: false,
+  livestreamChannel: 'hify',
   addVAR: false,
+  discountCode: '',
 
   // Step 3
   games: [],
@@ -200,7 +207,9 @@ export default function CreateTournamentPage() {
         notes: form.notes || null,
         package_id: form.packageId,
         add_livestream: form.addLivestream,
+        livestream_channel: form.addLivestream ? form.livestreamChannel : null,
         add_var: form.addVAR,
+        discount_code: form.discountCode || null,
         status: 'upcoming',
         banner_url: bannerUrl,
         banner_urls: bannerUrls,
@@ -609,14 +618,14 @@ function StepBasics({ form, set, setForm }) {
           <Field label="Start Date" required>
             <DateInput value={form.startDate} onChange={v => set('startDate', v)} />
           </Field>
-          <Field label="Start Time">
+          <Field label="Start Time" required>
             <TimePicker value={form.startTime} onChange={v => set('startTime', v)} />
           </Field>
           <Field label="End Date" required>
             <DateInput value={form.endDate} onChange={v => set('endDate', v)} error={!!endDateError} />
             {endDateError && <FieldError>{endDateError}</FieldError>}
           </Field>
-          <Field label="End Time">
+          <Field label="End Time" required>
             <TimePicker value={form.endTime} onChange={v => set('endTime', v)} error={!!endTimeError} />
             {endTimeError && <FieldError>{endTimeError}</FieldError>}
           </Field>
@@ -662,7 +671,7 @@ function StepBasics({ form, set, setForm }) {
         </Field>
       </Section>
 
-      <Section title="Tournament Banner">
+      <Section title={<>Tournament Banner <span style={{ color: 'var(--accent)' }}>*</span></>}>
         <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/*" multiple style={{ display: 'none' }} onChange={handleBanner} />
         {form.bannerPreviews.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -717,7 +726,14 @@ function StepDeliverables({ form, set }) {
                 <div className="option-radio-dot" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', lineHeight: 1.3 }}>{p.label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', lineHeight: 1.3 }}>{p.label}</div>
+                  {p.price > 0 ? (
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--accent)', flexShrink: 0 }}>₹{p.price}/player</div>
+                  ) : (
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--green2)', flexShrink: 0 }}>Free</div>
+                  )}
+                </div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
                   {p.deliverables.map(d => (
                     <span key={d} className="badge badge-gray" style={{ fontSize: 10 }}>{d}</span>
@@ -727,16 +743,44 @@ function StepDeliverables({ form, set }) {
             </div>
           ))}
         </div>
+        <Field label="Discount Code (optional)">
+          <input
+            className="input"
+            placeholder="Enter code"
+            value={form.discountCode}
+            onChange={e => set('discountCode', e.target.value)}
+          />
+        </Field>
       </Section>
 
       <Section title="Add-ons">
         <AddOnRow
           icon={<LiveStreamIcon />}
           label="Livestream"
-          description="Live YouTube stream from each camera."
+          description="Live YouTube stream from each camera. ₹250/hr per camera."
           checked={form.addLivestream}
           onChange={() => set('addLivestream', !form.addLivestream)}
         />
+        {form.addLivestream && (
+          <div style={{ marginLeft: 48, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              { value: 'hify', label: 'HiFy YouTube Channel' },
+              { value: 'own', label: 'Our YouTube Channel' },
+            ].map(opt => (
+              <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                <input
+                  type="radio"
+                  name="livestreamChannel"
+                  value={opt.value}
+                  checked={form.livestreamChannel === opt.value}
+                  onChange={() => set('livestreamChannel', opt.value)}
+                  style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
+                />
+                <span style={{ color: 'var(--text)' }}>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
         <div className="divider" style={{ margin: '10px 0' }} />
         <AddOnRow
           icon={<VARIcon />}
@@ -974,8 +1018,9 @@ function StepReview({ form }) {
       <ReviewSection title="Deliverables">
         <ReviewRow label="Package" value={pkg?.label} />
         <ReviewRow label="Includes" value={pkg?.deliverables.join(', ')} />
-        {form.addLivestream && <ReviewRow label="Livestream" value="Yes" />}
+        {form.addLivestream && <ReviewRow label="Livestream" value={form.livestreamChannel === 'own' ? 'Yes – Our YouTube Channel' : 'Yes – HiFy YouTube Channel'} />}
         {form.addVAR && <ReviewRow label="VAR" value="Yes" />}
+        {form.discountCode && <ReviewRow label="Discount Code" value={form.discountCode} />}
       </ReviewSection>
 
       {form.games.length > 0 && (
@@ -1180,6 +1225,8 @@ function FieldError({ children }) {
 function isStepValid(step, form) {
   if (step === 0) {
     if (!form.name || !form.sport || !form.facilityId || !form.startDate || !form.endDate) return false;
+    if (!form.startTime || !form.endTime) return false;
+    if (form.bannerFiles.length === 0) return false;
     if (form.endDate < form.startDate) return false;
     if (form.startDate === form.endDate && form.startTime && form.endTime && form.endTime <= form.startTime) return false;
     return true;
