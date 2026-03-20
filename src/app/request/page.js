@@ -23,7 +23,7 @@ const PACKAGES = [
     label: 'Personalized Reels + Shorts – Semis & Finals',
     description: 'Personalized content for semifinal and final stage players only.',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
-    price: 150,
+    price: 200,
   },
   {
     id: 'shorts_all',

@@ -15,7 +15,7 @@ export const PACKAGES = {
   semis: {
     label: 'Personalized Reels + Shorts – Semis & Finals',
     deliverables: ['Personalized Reels', 'Personalized Shorts', 'General Shorts', 'Photos'],
-    price: 150,
+    price: 200,
   },
   shorts_all: {
     label: 'Personalized Shorts – All Players',
