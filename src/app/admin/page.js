@@ -749,7 +749,7 @@ function DiscountCodesPanel() {
       discount_type: form.discount_type,
       discount_value: val,
       max_uses: form.unlimited ? null : (parseInt(form.max_uses) || null),
-      expires_at: form.expires_at || null,
+      expires_at: form.expires_at ? `${form.expires_at}T23:59:59+05:30` : null,
     });
     if (err) {
       setError(err.message.includes('unique') ? 'Code already exists.' : err.message);
@@ -783,8 +783,7 @@ function DiscountCodesPanel() {
 
   function fmtExpiry(d) {
     if (!d) return 'No expiry';
-    const dt = new Date(d);
-    return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return fmtDateDisplay(d.slice(0, 10));
   }
 
   function fmtUseTime(d) {
@@ -842,8 +841,8 @@ function DiscountCodesPanel() {
             </div>
             <div>
               <label className="label">Expires On (optional)</label>
-              <input className="input" type="date" value={form.expires_at}
-                onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} />
+              <DateInput value={form.expires_at}
+                onChange={v => setForm(f => ({ ...f, expires_at: v }))} />
             </div>
           </div>
 
