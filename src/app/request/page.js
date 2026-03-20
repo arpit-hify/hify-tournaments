@@ -724,7 +724,7 @@ function StepBasics({ form, set, setForm }) {
             ))}
             <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}
               style={{ height: 38, justifyContent: 'center', fontSize: 13 }}>
-              + Add another image
+              + Add more images
             </button>
           </div>
         ) : (
@@ -734,7 +734,8 @@ function StepBasics({ form, set, setForm }) {
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload a high quality banner image</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Upload banner images</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>You can select multiple images at once</div>
           </div>
         )}
       </Section>
