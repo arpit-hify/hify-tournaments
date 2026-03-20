@@ -145,6 +145,8 @@ export default function AdminPage() {
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
 
+  const [activeTab, setActiveTab] = useState('tournaments');
+
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -339,8 +341,19 @@ export default function AdminPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-dark.png" alt="HiFy" style={{ height: 32, width: 'auto' }} />
         </a>
+        <div style={{ display: 'flex', gap: 4, marginLeft: 24 }}>
+          {[{ id: 'tournaments', label: 'Tournaments' }, { id: 'discount_codes', label: 'Discount Codes' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              height: 30, padding: '0 14px', borderRadius: 100, fontSize: 12, fontWeight: 600,
+              border: 'none', cursor: 'pointer',
+              background: activeTab === tab.id ? 'var(--accent)' : 'var(--surface2)',
+              color: activeTab === tab.id ? '#fff' : 'var(--text)', transition: 'all 0.15s',
+            }}>{tab.label}</button>
+          ))}
+        </div>
       </header>
-    <div style={{ display: 'flex', height: 'calc(100vh - 52px)', overflow: 'hidden', background: 'var(--bg)' }}>
+      {activeTab === 'discount_codes' && <DiscountCodesPanel />}
+    <div style={{ display: activeTab === 'tournaments' ? 'flex' : 'none', height: 'calc(100vh - 52px)', overflow: 'hidden', background: 'var(--bg)' }}>
 
       {/* ── Left panel: list ── */}
       <div style={{
@@ -576,8 +589,9 @@ function DetailPanel({ tournament: t, onEdit, onVerifyDownload, verifying, onCha
       <DetailCard title="Deliverables">
         <DetailRow label="Package" value={pkg?.label ?? t.package_id} />
         {pkg?.deliverables && <DetailRow label="Includes" value={pkg.deliverables.join(', ')} />}
-        <DetailRow label="Livestream" value={t.add_livestream ? 'Yes' : 'No'} />
+        <DetailRow label="Livestream" value={t.add_livestream ? (t.livestream_channel === 'own' ? `${t.facility_name} YouTube Channel` : 'HiFy YouTube Channel') : 'No'} />
         <DetailRow label="VAR" value={t.add_var ? 'Yes' : 'No'} />
+        {t.discount_code && <DetailRow label="Discount Code" value={t.discount_code} accent />}
       </DetailCard>
 
       {t.games?.length > 0 && (
@@ -684,5 +698,137 @@ function Spinner() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
     </svg>
+  );
+}
+
+// ─── Discount Codes Panel ─────────────────────────────────────────────────────
+
+function DiscountCodesPanel() {
+  const [codes, setCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newCode, setNewCode] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => { loadCodes(); }, []);
+
+  async function loadCodes() {
+    setLoading(true);
+    const { data } = await supabase.from('discount_codes').select('*').order('created_at', { ascending: false });
+    setCodes(data ?? []);
+    setLoading(false);
+  }
+
+  async function addCode(e) {
+    e.preventDefault();
+    const code = newCode.trim().toUpperCase();
+    if (!code) return;
+    setError('');
+    setSaving(true);
+    const { error: err } = await supabase.from('discount_codes').insert({ code, description: newDesc.trim() || null });
+    if (err) {
+      setError(err.message.includes('unique') ? 'Code already exists.' : err.message);
+    } else {
+      setNewCode('');
+      setNewDesc('');
+      await loadCodes();
+    }
+    setSaving(false);
+  }
+
+  async function toggleActive(id, current) {
+    await supabase.from('discount_codes').update({ active: !current }).eq('id', id);
+    setCodes(prev => prev.map(c => c.id === id ? { ...c, active: !current } : c));
+  }
+
+  async function deleteCode(id) {
+    await supabase.from('discount_codes').delete().eq('id', id);
+    setCodes(prev => prev.filter(c => c.id !== id));
+  }
+
+  return (
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '28px 24px' }}>
+      <h2 className="font-display" style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Discount Codes</h2>
+
+      {/* Add new code */}
+      <div className="card" style={{ padding: '16px', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+          Add Code
+        </div>
+        <form onSubmit={addCode} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+            <input
+              className="input"
+              placeholder="Code (e.g. EARLY20)"
+              value={newCode}
+              onChange={e => { setNewCode(e.target.value); setError(''); }}
+              style={{ textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}
+            />
+            <input
+              className="input"
+              placeholder="Description (optional)"
+              value={newDesc}
+              onChange={e => setNewDesc(e.target.value)}
+            />
+          </div>
+          {error && <div style={{ fontSize: 12, color: 'var(--red)' }}>{error}</div>}
+          <button type="submit" className="btn-primary" disabled={saving || !newCode.trim()} style={{ height: 38, justifyContent: 'center', alignSelf: 'flex-start', padding: '0 20px' }}>
+            {saving ? <Spinner /> : 'Add Code'}
+          </button>
+        </form>
+      </div>
+
+      {/* Code list */}
+      <div className="card" style={{ padding: '14px 16px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+          {codes.length} Code{codes.length !== 1 ? 's' : ''}
+        </div>
+        {loading && [1, 2, 3].map(i => (
+          <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
+        ))}
+        {!loading && codes.length === 0 && (
+          <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px 0' }}>No codes yet.</div>
+        )}
+        {codes.map((c, i) => (
+          <div key={c.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
+            borderBottom: i < codes.length - 1 ? '1px solid var(--border)' : 'none',
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontWeight: 700, fontSize: 13, letterSpacing: '0.05em',
+                  color: c.active ? 'var(--text)' : 'var(--muted)',
+                  textDecoration: c.active ? 'none' : 'line-through',
+                }}>{c.code}</span>
+                {!c.active && <span style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface2)', padding: '1px 6px', borderRadius: 100, border: '1px solid var(--border)' }}>Inactive</span>}
+              </div>
+              {c.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{c.description}</div>}
+            </div>
+            <button
+              onClick={() => toggleActive(c.id, c.active)}
+              style={{
+                height: 28, padding: '0 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                border: '1px solid var(--border)', background: 'var(--surface2)',
+                color: 'var(--text)', cursor: 'pointer',
+              }}
+            >{c.active ? 'Deactivate' : 'Activate'}</button>
+            <button
+              onClick={() => deleteCode(c.id)}
+              style={{
+                width: 28, height: 28, borderRadius: 8, border: '1px solid var(--border)',
+                background: 'var(--surface2)', color: 'var(--red)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}
+            >
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

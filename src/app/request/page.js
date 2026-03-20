@@ -765,7 +765,7 @@ function StepDeliverables({ form, set }) {
           <div style={{ marginLeft: 48, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
               { value: 'hify', label: 'HiFy YouTube Channel' },
-              { value: 'own', label: 'Our YouTube Channel' },
+              { value: 'own', label: `${form.facilityName || 'Facility'} YouTube Channel` },
             ].map(opt => (
               <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
                 <input
@@ -785,7 +785,7 @@ function StepDeliverables({ form, set }) {
         <AddOnRow
           icon={<VARIcon />}
           label="VAR (Video Assistant Referee)"
-          description="Video review for disputed calls. For semis & finals."
+          description="Video review for disputed calls. For semis & finals. ₹4,000/day."
           checked={form.addVAR}
           onChange={() => set('addVAR', !form.addVAR)}
         />
