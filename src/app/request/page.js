@@ -778,32 +778,43 @@ function StepDeliverables({ form, set, discountStatus, discountData, onValidateC
           ))}
         </div>
         <Field label="Discount Code (optional)">
-          <div style={{ position: 'relative' }}>
-            <input
-              className="input"
-              placeholder="Enter code"
-              value={form.discountCode}
-              style={{ paddingRight: 36, textTransform: 'uppercase', letterSpacing: '0.04em' }}
-              onChange={e => { set('discountCode', e.target.value); onClearDiscount(); }}
-              onBlur={() => onValidateCode(form.discountCode)}
-            />
-            {discountStatus === 'checking' && (
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
-                <Spinner />
-              </div>
-            )}
-            {discountStatus === 'valid' && (
-              <svg width="14" height="14" fill="none" stroke="var(--green2)" strokeWidth="2.5" viewBox="0 0 24 24"
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            )}
-            {discountStatus === 'invalid' && (
-              <svg width="14" height="14" fill="none" stroke="var(--red)" strokeWidth="2.5" viewBox="0 0 24 24"
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                className="input"
+                placeholder="Enter code"
+                value={form.discountCode}
+                style={{ paddingRight: discountStatus ? 32 : undefined, textTransform: 'uppercase', letterSpacing: '0.04em', width: '100%' }}
+                onChange={e => { set('discountCode', e.target.value); onClearDiscount(); }}
+                onKeyDown={e => e.key === 'Enter' && onValidateCode(form.discountCode)}
+              />
+              {discountStatus === 'checking' && (
+                <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                  <Spinner />
+                </div>
+              )}
+              {discountStatus === 'valid' && (
+                <svg width="14" height="14" fill="none" stroke="var(--green2)" strokeWidth="2.5" viewBox="0 0 24 24"
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              {discountStatus === 'invalid' && (
+                <svg width="14" height="14" fill="none" stroke="var(--red)" strokeWidth="2.5" viewBox="0 0 24 24"
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => onValidateCode(form.discountCode)}
+              disabled={!form.discountCode.trim() || discountStatus === 'checking' || discountStatus === 'valid'}
+              style={{ height: 40, padding: '0 16px', fontSize: 13, flexShrink: 0 }}
+            >
+              {discountStatus === 'checking' ? 'Applying…' : discountStatus === 'valid' ? 'Applied' : 'Apply'}
+            </button>
           </div>
           {discountStatus === 'valid' && discountData && (
             <div style={{ fontSize: 12, color: 'var(--green2)', marginTop: 4, fontWeight: 600 }}>
