@@ -703,13 +703,17 @@ function Spinner() {
 
 // ─── Discount Codes Panel ─────────────────────────────────────────────────────
 
+const EMPTY_FORM = { code: '', description: '', discount_type: 'percent', discount_value: '', max_uses: '', unlimited: true, expires_at: '' };
+
 function DiscountCodesPanel() {
   const [codes, setCodes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newCode, setNewCode] = useState('');
-  const [newDesc, setNewDesc] = useState('');
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [expandedUses, setExpandedUses] = useState(null); // code id
+  const [uses, setUses] = useState({}); // { [codeId]: [...] }
+  const [loadingUses, setLoadingUses] = useState({});
 
   useEffect(() => { loadCodes(); }, []);
 
@@ -720,18 +724,37 @@ function DiscountCodesPanel() {
     setLoading(false);
   }
 
-  async function addCode(e) {
+  async function loadUses(codeId) {
+    setLoadingUses(prev => ({ ...prev, [codeId]: true }));
+    const { data } = await supabase
+      .from('discount_code_uses')
+      .select('*')
+      .eq('code_id', codeId)
+      .order('used_at', { ascending: false });
+    setUses(prev => ({ ...prev, [codeId]: data ?? [] }));
+    setLoadingUses(prev => ({ ...prev, [codeId]: false }));
+  }
+
+  async function handleAdd(e) {
     e.preventDefault();
-    const code = newCode.trim().toUpperCase();
-    if (!code) return;
+    const code = form.code.trim().toUpperCase();
+    const val = parseFloat(form.discount_value);
+    if (!code || isNaN(val) || val <= 0) return;
+    if (form.discount_type === 'percent' && val > 100) { setError('Percentage cannot exceed 100.'); return; }
     setError('');
     setSaving(true);
-    const { error: err } = await supabase.from('discount_codes').insert({ code, description: newDesc.trim() || null });
+    const { error: err } = await supabase.from('discount_codes').insert({
+      code,
+      description: form.description.trim() || null,
+      discount_type: form.discount_type,
+      discount_value: val,
+      max_uses: form.unlimited ? null : (parseInt(form.max_uses) || null),
+      expires_at: form.expires_at || null,
+    });
     if (err) {
       setError(err.message.includes('unique') ? 'Code already exists.' : err.message);
     } else {
-      setNewCode('');
-      setNewDesc('');
+      setForm(EMPTY_FORM);
       await loadCodes();
     }
     setSaving(false);
@@ -745,90 +768,206 @@ function DiscountCodesPanel() {
   async function deleteCode(id) {
     await supabase.from('discount_codes').delete().eq('id', id);
     setCodes(prev => prev.filter(c => c.id !== id));
+    setExpandedUses(v => v === id ? null : v);
+  }
+
+  function toggleUses(id) {
+    if (expandedUses === id) { setExpandedUses(null); return; }
+    setExpandedUses(id);
+    if (!uses[id]) loadUses(id);
+  }
+
+  function fmtDiscount(c) {
+    return c.discount_type === 'percent' ? `${c.discount_value}% off` : `₹${c.discount_value} off`;
+  }
+
+  function fmtExpiry(d) {
+    if (!d) return 'No expiry';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function fmtUseTime(d) {
+    const dt = new Date(d);
+    return dt.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: '28px 24px' }}>
+    <div style={{ maxWidth: 700, margin: '0 auto', padding: '28px 24px' }}>
       <h2 className="font-display" style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Discount Codes</h2>
 
-      {/* Add new code */}
-      <div className="card" style={{ padding: '16px', marginBottom: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
-          Add Code
+      {/* ── Add new code ── */}
+      <div className="card" style={{ padding: '16px 18px', marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+          New Code
         </div>
-        <form onSubmit={addCode} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
-            <input
-              className="input"
-              placeholder="Code (e.g. EARLY20)"
-              value={newCode}
-              onChange={e => { setNewCode(e.target.value); setError(''); }}
-              style={{ textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}
-            />
-            <input
-              className="input"
-              placeholder="Description (optional)"
-              value={newDesc}
-              onChange={e => setNewDesc(e.target.value)}
-            />
+            <div>
+              <label className="label">Code</label>
+              <input className="input" placeholder="e.g. EARLY20" value={form.code}
+                onChange={e => { setForm(f => ({ ...f, code: e.target.value })); setError(''); }}
+                style={{ textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }} />
+            </div>
+            <div>
+              <label className="label">Description (optional)</label>
+              <input className="input" placeholder="e.g. Early bird discount" value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+            </div>
           </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <div>
+              <label className="label">Discount Type</label>
+              <div style={{ display: 'flex', gap: 6, height: 40 }}>
+                {[{ v: 'percent', l: '% Off' }, { v: 'flat', l: '₹ Flat' }].map(opt => (
+                  <button key={opt.v} type="button"
+                    onClick={() => setForm(f => ({ ...f, discount_type: opt.v }))}
+                    style={{
+                      flex: 1, border: `1.5px solid ${form.discount_type === opt.v ? 'var(--accent)' : 'var(--border)'}`,
+                      borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      background: form.discount_type === opt.v ? 'rgba(255,107,53,0.08)' : 'var(--surface2)',
+                      color: form.discount_type === opt.v ? 'var(--accent)' : 'var(--text)',
+                    }}>{opt.l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label">Value</label>
+              <input className="input" type="number" min="1" max={form.discount_type === 'percent' ? 100 : undefined}
+                placeholder={form.discount_type === 'percent' ? '20' : '500'}
+                value={form.discount_value}
+                onChange={e => setForm(f => ({ ...f, discount_value: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Expires On (optional)</label>
+              <input className="input" type="date" value={form.expires_at}
+                onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input type="checkbox" checked={form.unlimited}
+                onChange={e => setForm(f => ({ ...f, unlimited: e.target.checked, max_uses: '' }))}
+                style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
+              Unlimited uses
+            </label>
+            {!form.unlimited && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className="label" style={{ margin: 0 }}>Max uses</label>
+                <input className="input" type="number" min="1" placeholder="e.g. 50"
+                  value={form.max_uses} onChange={e => setForm(f => ({ ...f, max_uses: e.target.value }))}
+                  style={{ width: 100 }} />
+              </div>
+            )}
+          </div>
+
           {error && <div style={{ fontSize: 12, color: 'var(--red)' }}>{error}</div>}
-          <button type="submit" className="btn-primary" disabled={saving || !newCode.trim()} style={{ height: 38, justifyContent: 'center', alignSelf: 'flex-start', padding: '0 20px' }}>
-            {saving ? <Spinner /> : 'Add Code'}
+
+          <button type="submit" className="btn-primary"
+            disabled={saving || !form.code.trim() || !form.discount_value}
+            style={{ height: 40, justifyContent: 'center', alignSelf: 'flex-start', padding: '0 24px' }}>
+            {saving ? <Spinner /> : 'Create Code'}
           </button>
         </form>
       </div>
 
-      {/* Code list */}
+      {/* ── Code list ── */}
       <div className="card" style={{ padding: '14px 16px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
           {codes.length} Code{codes.length !== 1 ? 's' : ''}
         </div>
+
         {loading && [1, 2, 3].map(i => (
-          <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
+          <div key={i} className="skeleton" style={{ height: 56, borderRadius: 10, marginBottom: 8 }} />
         ))}
         {!loading && codes.length === 0 && (
           <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px 0' }}>No codes yet.</div>
         )}
-        {codes.map((c, i) => (
-          <div key={c.id} style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
-            borderBottom: i < codes.length - 1 ? '1px solid var(--border)' : 'none',
-          }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  fontWeight: 700, fontSize: 13, letterSpacing: '0.05em',
-                  color: c.active ? 'var(--text)' : 'var(--muted)',
-                  textDecoration: c.active ? 'none' : 'line-through',
-                }}>{c.code}</span>
-                {!c.active && <span style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface2)', padding: '1px 6px', borderRadius: 100, border: '1px solid var(--border)' }}>Inactive</span>}
+
+        {codes.map((c, i) => {
+          const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+          const isMaxed = c.max_uses !== null && c.uses_count >= c.max_uses;
+          const isEffectivelyActive = c.active && !isExpired && !isMaxed;
+          const showUses = expandedUses === c.id;
+
+          return (
+            <div key={c.id} style={{ borderBottom: i < codes.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontWeight: 700, fontSize: 13, letterSpacing: '0.05em',
+                      color: isEffectivelyActive ? 'var(--text)' : 'var(--muted)',
+                      textDecoration: isEffectivelyActive ? 'none' : 'line-through',
+                    }}>{c.code}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{fmtDiscount(c)}</span>
+                    {!c.active && <Badge label="Inactive" />}
+                    {isExpired && <Badge label="Expired" />}
+                    {isMaxed && <Badge label="Limit reached" />}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 10 }}>
+                    <span>{c.uses_count}{c.max_uses !== null ? `/${c.max_uses}` : ''} use{c.uses_count !== 1 ? 's' : ''}</span>
+                    <span>·</span>
+                    <span>{fmtExpiry(c.expires_at)}</span>
+                    {c.description && <><span>·</span><span>{c.description}</span></>}
+                  </div>
+                </div>
+                <button onClick={() => toggleUses(c.id)}
+                  style={{ height: 28, padding: '0 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    border: '1px solid var(--border)', background: showUses ? 'var(--surface)' : 'var(--surface2)',
+                    color: 'var(--text)', cursor: 'pointer' }}>
+                  {showUses ? 'Hide' : 'Uses'}
+                </button>
+                <button onClick={() => toggleActive(c.id, c.active)}
+                  style={{ height: 28, padding: '0 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    border: '1px solid var(--border)', background: 'var(--surface2)',
+                    color: 'var(--text)', cursor: 'pointer' }}>
+                  {c.active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onClick={() => deleteCode(c.id)}
+                  style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--border)',
+                    background: 'var(--surface2)', color: 'var(--red)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                  </svg>
+                </button>
               </div>
-              {c.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{c.description}</div>}
+
+              {/* Usage log */}
+              {showUses && (
+                <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
+                  {loadingUses[c.id] && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Loading…</div>}
+                  {!loadingUses[c.id] && uses[c.id]?.length === 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>No uses yet.</div>
+                  )}
+                  {!loadingUses[c.id] && uses[c.id]?.map((u, j) => (
+                    <div key={u.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      fontSize: 12, padding: '5px 0',
+                      borderBottom: j < uses[c.id].length - 1 ? '1px solid var(--border)' : 'none',
+                    }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{u.tournament_name || '—'}</span>
+                      <span style={{ color: 'var(--muted)' }}>{fmtUseTime(u.used_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => toggleActive(c.id, c.active)}
-              style={{
-                height: 28, padding: '0 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                border: '1px solid var(--border)', background: 'var(--surface2)',
-                color: 'var(--text)', cursor: 'pointer',
-              }}
-            >{c.active ? 'Deactivate' : 'Activate'}</button>
-            <button
-              onClick={() => deleteCode(c.id)}
-              style={{
-                width: 28, height: 28, borderRadius: 8, border: '1px solid var(--border)',
-                background: 'var(--surface2)', color: 'var(--red)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}
-            >
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
-              </svg>
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+function Badge({ label }) {
+  return (
+    <span style={{ fontSize: 10, color: 'var(--muted)', background: 'var(--surface2)', padding: '1px 6px', borderRadius: 100, border: '1px solid var(--border)', fontWeight: 600 }}>
+      {label}
+    </span>
   );
 }

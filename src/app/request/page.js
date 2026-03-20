@@ -160,8 +160,27 @@ export default function CreateTournamentPage() {
   const [submitError, setSubmitError] = useState(null);
   const [createdTournament, setCreatedTournament] = useState(null);
   const [slowUpload, setSlowUpload] = useState(false);
+  const [discountStatus, setDiscountStatus] = useState(null); // null | 'checking' | 'valid' | 'invalid'
+  const [discountData, setDiscountData] = useState(null);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const validateDiscountCode = async (code) => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) { setDiscountStatus(null); setDiscountData(null); return; }
+    setDiscountStatus('checking');
+    const { data } = await supabase
+      .from('discount_codes')
+      .select('*')
+      .eq('code', trimmed)
+      .eq('active', true)
+      .single();
+    if (!data) { setDiscountStatus('invalid'); setDiscountData(null); return; }
+    if (data.expires_at && new Date(data.expires_at) < new Date()) { setDiscountStatus('invalid'); setDiscountData(null); return; }
+    if (data.max_uses !== null && data.uses_count >= data.max_uses) { setDiscountStatus('invalid'); setDiscountData(null); return; }
+    setDiscountStatus('valid');
+    setDiscountData(data);
+  };
 
   const goNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
   const goBack = () => setStep(s => Math.max(s - 1, 0));
@@ -209,7 +228,8 @@ export default function CreateTournamentPage() {
         add_livestream: form.addLivestream,
         livestream_channel: form.addLivestream ? form.livestreamChannel : null,
         add_var: form.addVAR,
-        discount_code: form.discountCode || null,
+        discount_code: discountData ? discountData.code : (form.discountCode || null),
+        discount_code_id: discountData?.id ?? null,
         status: 'upcoming',
         banner_url: bannerUrl,
         banner_urls: bannerUrls,
@@ -235,6 +255,19 @@ export default function CreateTournamentPage() {
           end_time: g.endTime ? new Date(g.endTime).toISOString() : null,
         }))
       );
+    }
+
+    // Log discount code usage
+    if (discountData) {
+      await supabase.from('discount_code_uses').insert({
+        code_id: discountData.id,
+        code: discountData.code,
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+      });
+      await supabase.from('discount_codes')
+        .update({ uses_count: discountData.uses_count + 1 })
+        .eq('id', discountData.id);
     }
 
     clearTimeout(slowTimer);
@@ -286,7 +319,7 @@ export default function CreateTournamentPage() {
       {/* Step content */}
       <div className="slide-up" key={step} style={{ marginTop: 20 }}>
         {step === 0 && <StepBasics form={form} set={set} setForm={setForm} />}
-        {step === 1 && <StepDeliverables form={form} set={set} />}
+        {step === 1 && <StepDeliverables form={form} set={set} discountStatus={discountStatus} discountData={discountData} onValidateCode={validateDiscountCode} onClearDiscount={() => { setDiscountStatus(null); setDiscountData(null); }} />}
         {step === 2 && <StepSchedule form={form} set={set} />}
         {step === 3 && <StepReview form={form} />}
       </div>
@@ -711,7 +744,7 @@ function StepBasics({ form, set, setForm }) {
 
 // ─── Step 2: Deliverables ─────────────────────────────────────────────────────
 
-function StepDeliverables({ form, set }) {
+function StepDeliverables({ form, set, discountStatus, discountData, onValidateCode, onClearDiscount }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Section title="Highlights Package">
@@ -744,12 +777,44 @@ function StepDeliverables({ form, set }) {
           ))}
         </div>
         <Field label="Discount Code (optional)">
-          <input
-            className="input"
-            placeholder="Enter code"
-            value={form.discountCode}
-            onChange={e => set('discountCode', e.target.value)}
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              className="input"
+              placeholder="Enter code"
+              value={form.discountCode}
+              style={{ paddingRight: 36, textTransform: 'uppercase', letterSpacing: '0.04em' }}
+              onChange={e => { set('discountCode', e.target.value); onClearDiscount(); }}
+              onBlur={() => onValidateCode(form.discountCode)}
+            />
+            {discountStatus === 'checking' && (
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <Spinner />
+              </div>
+            )}
+            {discountStatus === 'valid' && (
+              <svg width="14" height="14" fill="none" stroke="var(--green2)" strokeWidth="2.5" viewBox="0 0 24 24"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+            {discountStatus === 'invalid' && (
+              <svg width="14" height="14" fill="none" stroke="var(--red)" strokeWidth="2.5" viewBox="0 0 24 24"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
+          </div>
+          {discountStatus === 'valid' && discountData && (
+            <div style={{ fontSize: 12, color: 'var(--green2)', marginTop: 4, fontWeight: 600 }}>
+              {discountData.discount_type === 'percent'
+                ? `${discountData.discount_value}% off`
+                : `₹${discountData.discount_value} off`}
+              {discountData.description ? ` · ${discountData.description}` : ''}
+            </div>
+          )}
+          {discountStatus === 'invalid' && (
+            <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>Invalid or expired code</div>
+          )}
         </Field>
       </Section>
 
@@ -1020,7 +1085,7 @@ function StepReview({ form }) {
         <ReviewRow label="Includes" value={pkg?.deliverables.join(', ')} />
         {form.addLivestream && <ReviewRow label="Livestream" value={form.livestreamChannel === 'own' ? 'Yes – Our YouTube Channel' : 'Yes – HiFy YouTube Channel'} />}
         {form.addVAR && <ReviewRow label="VAR" value="Yes" />}
-        {form.discountCode && <ReviewRow label="Discount Code" value={form.discountCode} />}
+        {form.discountCode && <ReviewRow label="Discount Code" value={form.discountCode.toUpperCase()} />}
       </ReviewSection>
 
       {form.games.length > 0 && (
