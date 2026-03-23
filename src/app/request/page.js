@@ -834,7 +834,7 @@ function StepDeliverables({ form, set, discountStatus, discountData, onValidateC
         <AddOnRow
           icon={<LiveStreamIcon />}
           label="Livestream"
-          description="Live YouTube stream from each camera. ₹250/hr per camera."
+          description="Live YouTube stream from each camera. ₹300/hr per camera."
           checked={form.addLivestream}
           onChange={() => set('addLivestream', !form.addLivestream)}
         />
