@@ -834,15 +834,15 @@ function StepDeliverables({ form, set, discountStatus, discountData, onValidateC
         <AddOnRow
           icon={<LiveStreamIcon />}
           label="Livestream"
-          description={`Live YouTube stream from each camera. ${form.addLivestream && form.livestreamChannel === 'own' ? '₹300/hr per camera.' : '₹250/hr per camera.'}`}
+          description="Live YouTube stream from each camera."
           checked={form.addLivestream}
           onChange={() => set('addLivestream', !form.addLivestream)}
         />
         {form.addLivestream && (
           <div style={{ marginLeft: 48, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[
-              { value: 'hify', label: 'HiFy YouTube Channel' },
-              { value: 'own', label: `${form.facilityName || 'Facility'} YouTube Channel` },
+              { value: 'hify', label: 'HiFy YouTube Channel', price: '₹250/hr per camera' },
+              { value: 'own', label: `${form.facilityName || 'Facility'} YouTube Channel`, price: '₹300/hr per camera' },
             ].map(opt => (
               <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
                 <input
@@ -854,6 +854,7 @@ function StepDeliverables({ form, set, discountStatus, discountData, onValidateC
                   style={{ accentColor: 'var(--accent)', width: 15, height: 15 }}
                 />
                 <span style={{ color: 'var(--text)' }}>{opt.label}</span>
+                <span style={{ color: 'var(--muted)', fontSize: 11 }}>{opt.price}</span>
               </label>
             ))}
           </div>
